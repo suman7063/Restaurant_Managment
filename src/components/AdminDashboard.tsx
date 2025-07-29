@@ -16,8 +16,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   orders,
   tables
 }) => {
-  const totalRevenue = tables.reduce((sum, table) => sum + table.revenue, 0);
-  const occupiedTables = tables.filter(table => table.status === 'occupied').length;
+  // Calculate dynamic table status based on orders
+  const getTableStatus = (tableId: number) => {
+    const tableOrders = orders.filter(order => order.table === tableId && order.status !== 'delivered');
+    if (tableOrders.length > 0) {
+      return 'occupied';
+    }
+    // If original status is cleaning and no active order, keep as cleaning
+    const orig = tables.find(t => t.id === tableId);
+    if (orig?.status === 'cleaning') return 'cleaning';
+    return 'available';
+  };
+
+  const getTableGuests = (tableId: number) => {
+    const tableOrder = orders.find(order => order.table === tableId && order.status !== 'delivered');
+    if (tableOrder) {
+      return tableOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+    }
+    return 0;
+  };
+
+  const getTableRevenue = (tableId: number) => {
+    const tableOrder = orders.find(order => order.table === tableId && order.status !== 'delivered');
+    if (tableOrder) {
+      return tableOrder.total;
+    }
+    return 0;
+  };
+
+  const dynamicTables = tables.map(table => ({
+    ...table,
+    status: getTableStatus(table.id),
+    guests: getTableGuests(table.id),
+    revenue: getTableRevenue(table.id)
+  }));
+
+  const totalRevenue = dynamicTables.reduce((sum, table) => sum + table.revenue, 0);
+  const occupiedTables = dynamicTables.filter(table => table.status === 'occupied').length;
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
 
@@ -107,7 +142,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Tables Status</span>
             </h3>
             <div className="grid grid-cols-4 gap-4">
-              {tables.map((table, index) => (
+              {dynamicTables.map((table, index) => (
                 <div 
                   key={table.id} 
                   className="text-center transform hover:scale-110 transition-all duration-300"

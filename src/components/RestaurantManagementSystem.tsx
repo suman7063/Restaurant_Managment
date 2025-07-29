@@ -127,10 +127,10 @@ const RestaurantManagementSystem = () => {
   if (!currentUser) {
     return (
       <>
-        {/* Notifications */}
+        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
-        ))}
+        ))}*/}
         
         <QRScanner
           qrInput={qrInput}
@@ -151,10 +151,11 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'customer') {
     return (
       <>
-        {/* Notifications */}
+        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
+          */}
         
         <CustomerInterface
           currentUser={currentUser}
@@ -176,10 +177,11 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'admin') {
     return (
       <>
-        {/* Notifications */}
+        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
+          */}
         
         <AdminDashboard
           currentUser={currentUser}
@@ -195,10 +197,11 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'waiter') {
     return (
       <>
-        {/* Notifications */}
+        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
+          */}
         
         <WaiterDashboard
           currentUser={currentUser}
@@ -215,10 +218,11 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'chef') {
     return (
       <>
-        {/* Notifications */}
+        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
+          */}
         
         <ChefDashboard
           currentUser={currentUser}
