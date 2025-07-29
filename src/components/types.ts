@@ -4,6 +4,7 @@ export interface User {
   name: string;
   table?: number;
   role: string;
+  qr_code?: string;
 }
 
 export interface MenuItem {

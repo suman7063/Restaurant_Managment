@@ -1,6 +1,8 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, MenuItem, CartItem } from './types';
+import { menuService } from '../lib/database';
+import { dummyMenu } from './data';
 
 interface CustomerInterfaceProps {
   currentUser: User;
@@ -9,7 +11,6 @@ interface CustomerInterfaceProps {
   loading: boolean;
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
-  dummyMenu: MenuItem[];
   onAddToCart: (item: MenuItem) => void;
   onUpdateQuantity: (itemId: number, quantity: number) => void;
   onPlaceOrder: () => void;
@@ -156,18 +157,39 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = ({
   loading,
   selectedCategory,
   setSelectedCategory,
-  dummyMenu,
   onAddToCart,
   onUpdateQuantity,
   onPlaceOrder
 }) => {
   const [animatingItems, setAnimatingItems] = useState<Set<number>>(new Set());
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, item: string}>>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
 
-  const categories = ['All', ...new Set(dummyMenu.map(item => item.category))];
+  // Fetch menu items from Supabase
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        setMenuLoading(true);
+        const items = await menuService.getAllMenuItems();
+        setMenuItems(items);
+      } catch (error) {
+        console.error('Error fetching menu items:', error);
+      } finally {
+        setMenuLoading(false);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  // Fallback to dummy menu if no items loaded
+  const availableMenuItems = menuItems.length > 0 ? menuItems : dummyMenu;
+  
+  const categories = ['All', ...new Set(availableMenuItems.map(item => item.category))];
   const filteredMenu = selectedCategory === 'All' 
-    ? dummyMenu 
-    : dummyMenu.filter(item => item.category === selectedCategory);
+    ? availableMenuItems 
+    : availableMenuItems.filter(item => item.category === selectedCategory);
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -298,7 +320,17 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = ({
 
                 {/* Menu Items */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredMenu.map((item, index) => (
+                  {menuLoading ? (
+                    <div className="col-span-2 text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                      <p className="text-gray-500">Loading menu items...</p>
+                    </div>
+                  ) : filteredMenu.length === 0 ? (
+                    <div className="col-span-2 text-center py-8">
+                      <p className="text-gray-500">No menu items available</p>
+                    </div>
+                  ) : (
+                    filteredMenu.map((item, index) => (
                     <div 
                       key={item.id} 
                       className={`bg-gray-50 rounded-lg p-4 border border-gray-200 transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 hover:border-purple-300 animate-fade-in-up ${
@@ -335,7 +367,8 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = ({
                         </button>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </div>
             </div>

@@ -7,7 +7,6 @@ interface ChefDashboardProps {
   currentUser: User;
   setCurrentUser: (user: User | null) => void;
   orders: Order[];
-  dummyMenu: MenuItem[];
   onUpdateOrderStatus: (orderId: number, newStatus: string) => void;
 }
 
@@ -15,7 +14,6 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
   currentUser,
   setCurrentUser,
   orders,
-  dummyMenu,
   onUpdateOrderStatus
 }) => {
   const pendingOrdersCount = orders.filter(o => o.status === 'pending').length;
@@ -129,7 +127,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
                   {order.items.map(item => (
                     <div key={item.id} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded-lg">
                       <div className="flex items-center space-x-2 text-black">
-                        <span className="text-lg">{dummyMenu.find(m => m.id === item.id)?.image}</span>
+                        <span className="text-lg">{item.image}</span>
                         <span>{item.quantity}x {item.name}</span>
                       </div>
                       <span className="text-gray-500 font-medium">{item.prepTime}min</span>

@@ -1,7 +1,6 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, MenuItem, CartItem, Order, Table, Notification } from './types';
-import { dummyUsers, dummyMenu, initialOrders, initialTables } from './data';
 import { addNotification } from './utils';
 import NotificationToast from './NotificationToast';
 import QRScanner from './QRScanner';
@@ -9,6 +8,8 @@ import CustomerInterface from './CustomerInterface';
 import AdminDashboard from './AdminDashboard';
 import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
+import { userService, orderService, tableService } from '../lib/database';
+import { dummyUsers } from './data';
 
 const RestaurantManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,9 +20,39 @@ const RestaurantManagementSystem = () => {
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [tables] = useState<Table[]>(initialTables);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [users, setUsers] = useState<Record<string, User>>({});
+
+  // Fetch initial data from Supabase
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [ordersData, tablesData, usersData] = await Promise.all([
+          orderService.getAllOrders(),
+          tableService.getAllTables(),
+          userService.getAllUsers()
+        ]);
+        
+        setOrders(ordersData);
+        setTables(tablesData);
+        
+        // Convert users array to record for easy lookup
+        const usersRecord: Record<string, User> = {};
+        usersData.forEach(user => {
+          if (user.qr_code) {
+            usersRecord[user.qr_code] = user;
+          }
+        });
+        setUsers(usersRecord);
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   // Simulate QR scanning
   const simulateQrScan = () => {
@@ -29,7 +60,9 @@ const RestaurantManagementSystem = () => {
     setLoading(true);
     
     setTimeout(() => {
-      const codes = Object.keys(dummyUsers);
+      // Use users from state, or fallback to dummy data if not loaded yet
+      const availableUsers = Object.keys(users).length > 0 ? users : dummyUsers;
+      const codes = Object.keys(availableUsers);
       const randomCode = codes[Math.floor(Math.random() * codes.length)];
       setQrInput(randomCode);
       setIsScanning(false);
@@ -39,7 +72,10 @@ const RestaurantManagementSystem = () => {
   };
 
   const handleQrScan = () => {
-    const user = dummyUsers[qrInput.toUpperCase()];
+    // Use users from state, or fallback to dummy data if not loaded yet
+    const availableUsers = Object.keys(users).length > 0 ? users : dummyUsers;
+    const user = availableUsers[qrInput.toUpperCase()];
+    
     if (user) {
       setLoading(true);
       setTimeout(() => {
@@ -85,42 +121,80 @@ const RestaurantManagementSystem = () => {
     }
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cart.length === 0 || !currentUser) return;
     
     setLoading(true);
-    setTimeout(() => {
-      const newOrder: Order = {
-        id: orders.length + 1,
-        table: currentUser.table || 1,
+    try {
+      const newOrder = await orderService.createOrder({
+        tableNumber: currentUser.table || 1,
         customerName: currentUser.name,
-        items: [...cart],
-        status: 'pending',
-        waiter: 'Sarah Waiter',
-        timestamp: new Date(),
-        total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        estimatedTime: Math.max(...cart.map(item => item.prepTime)) + 5
-      };
+        items: [...cart]
+      });
       
-      setOrders([...orders, newOrder]);
-      setCart([]);
+      if (newOrder) {
+        setOrders([newOrder, ...orders]);
+        setCart([]);
+        addNotification(notifications, setNotifications, 'Order placed successfully! 🎉', 'success');
+      } else {
+        // In development mode without Supabase, simulate order creation
+        const simulatedOrder: Order = {
+          id: orders.length + 1,
+          table: currentUser.table || 1,
+          customerName: currentUser.name,
+          items: [...cart],
+          status: 'pending',
+          waiter: 'Sarah Waiter',
+          timestamp: new Date(),
+          total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+          estimatedTime: Math.max(...cart.map(item => item.prepTime)) + 5
+        };
+        setOrders([simulatedOrder, ...orders]);
+        setCart([]);
+        addNotification(notifications, setNotifications, 'Order placed successfully! 🎉 (Development Mode)', 'success');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      addNotification(notifications, setNotifications, 'Error placing order. Please try again.', 'error');
+    } finally {
       setLoading(false);
-      addNotification(notifications, setNotifications, 'Order placed successfully! 🎉', 'success');
-    }, 1500);
+    }
   };
 
-  const updateOrderStatus = (orderId: number, newStatus: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-    
-    const statusMessages: Record<string, string> = {
-      'preparing': 'Order is now being prepared 👨‍🍳',
-      'ready': 'Order is ready for pickup! 🔔',
-      'delivered': 'Order delivered successfully ✅'
-    };
-    
-    addNotification(notifications, setNotifications, statusMessages[newStatus] || 'Order status updated', 'success');
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      const success = await orderService.updateOrderStatus(orderId, newStatus);
+      
+      if (success) {
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        ));
+        
+        const statusMessages: Record<string, string> = {
+          'preparing': 'Order is now being prepared 👨‍🍳',
+          'ready': 'Order is ready for pickup! 🔔',
+          'delivered': 'Order delivered successfully ✅'
+        };
+        
+        addNotification(notifications, setNotifications, statusMessages[newStatus] || 'Order status updated', 'success');
+      } else {
+        // In development mode without Supabase, simulate status update
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        ));
+        
+        const statusMessages: Record<string, string> = {
+          'preparing': 'Order is now being prepared 👨‍🍳',
+          'ready': 'Order is ready for pickup! 🔔',
+          'delivered': 'Order delivered successfully ✅'
+        };
+        
+        addNotification(notifications, setNotifications, `${statusMessages[newStatus] || 'Order status updated'} (Development Mode)`, 'success');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      addNotification(notifications, setNotifications, 'Error updating order status', 'error');
+    }
   };
 
   // QR Scanner Interface
@@ -139,7 +213,7 @@ const RestaurantManagementSystem = () => {
           loading={loading}
           showQrCodes={showQrCodes}
           setShowQrCodes={setShowQrCodes}
-          dummyUsers={dummyUsers}
+          dummyUsers={Object.keys(users).length > 0 ? users : dummyUsers}
           onQrScan={handleQrScan}
           onSimulateQrScan={simulateQrScan}
         />
@@ -164,7 +238,6 @@ const RestaurantManagementSystem = () => {
           loading={loading}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
-          dummyMenu={dummyMenu}
           onAddToCart={addToCart}
           onUpdateQuantity={updateQuantity}
           onPlaceOrder={placeOrder}
@@ -228,7 +301,6 @@ const RestaurantManagementSystem = () => {
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
           orders={orders}
-          dummyMenu={dummyMenu}
           onUpdateOrderStatus={updateOrderStatus}
         />
       </>
