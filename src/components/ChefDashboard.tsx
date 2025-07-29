@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChefHat, Clock, CheckCircle } from 'lucide-react';
 import { User, Order, MenuItem } from './types';
-import { getStatusColor } from './utils';
+import { formatCurrency, getOrderStatusColor, getItemStatusColor } from './utils';
 
 interface ChefDashboardProps {
   currentUser: User;
@@ -114,7 +114,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getOrderStatusColor(order.status)}`}>
                       {order.status}
                     </span>
                     {order.estimatedTime && (

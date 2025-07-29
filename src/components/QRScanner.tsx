@@ -1,34 +1,65 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { QrCode, Camera, Eye, CheckCircle } from 'lucide-react';
-import { User } from './types';
-import { generateQR } from './utils';
+import { User, Restaurant } from './types';
+import { generateQRCode } from './utils';
+import { userService } from '../lib/database';
 
 interface QRScannerProps {
-  qrInput: string;
-  setQrInput: (input: string) => void;
-  isScanning: boolean;
-  loading: boolean;
-  showQrCodes: boolean;
-  setShowQrCodes: (show: boolean) => void;
-  dummyUsers: Record<string, User>;
   onQrScan: () => void;
   onSimulateQrScan: () => void;
+  currentUser: User | null;
+  restaurant: Restaurant | null;
 }
 
-const QRScanner: React.FC<QRScannerProps> = ({
-  qrInput,
-  setQrInput,
-  isScanning,
-  loading,
-  showQrCodes,
-  setShowQrCodes,
-  dummyUsers,
-  onQrScan,
-  onSimulateQrScan
-}) => {
+const QRScanner: React.FC<QRScannerProps> = ({ onQrScan, currentUser, restaurant }) => {
+  const [qrInput, setQrInput] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showQrCodes, setShowQrCodes] = useState(false);
+
+  // Hide welcome message after 5 seconds
+  useEffect(() => {
+    if (showWelcome) {
+      const timer = setTimeout(() => setShowWelcome(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcome]);
+
+  const onSimulateQrScan = () => {
+    // Simulate QR scan functionality
+    console.log('Simulating QR scan...');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
+      {/* Welcome Message Overlay */}
+      {showWelcome && restaurant && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to {restaurant.name}!</h2>
+            <p className="text-gray-600 mb-6">
+              Your restaurant management system is now ready. Scan QR codes to access different interfaces.
+            </p>
+            <div className="bg-blue-50 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Admin QR Code:</strong> {currentUser?.qr_code}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -inset-10 opacity-20">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
@@ -58,7 +89,7 @@ const QRScanner: React.FC<QRScannerProps> = ({
               placeholder="Enter QR Code (e.g., QR001, ADMIN001)"
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
-              className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 text-center font-mono text-lg text-black"
+              className="w-full px-4 py-4 border-2  border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 text-center font-mono text-lg text-black"
               disabled={loading}
             />
             {qrInput && (
@@ -106,19 +137,26 @@ const QRScanner: React.FC<QRScannerProps> = ({
             <div className="mt-4 p-4 bg-gray-50 rounded-xl animate-slide-down">
               <p className="font-medium mb-3 text-gray-800">Demo Access Codes:</p>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                {Object.entries(dummyUsers).map(([code, user]) => (
-                  <div key={code} className="flex items-center space-x-2 p-2 bg-white rounded-lg border">
-                    <div className="w-8 h-8 bg-gray-800 rounded grid grid-cols-4 gap-px p-1">
-                      {generateQR().flat().slice(0, 16).map((dot, i) => (
-                        <div key={i} className={`${dot ? 'bg-white' : 'bg-gray-800'} rounded-sm`}></div>
-                      ))}
-                    </div>
-                    <div>
-                      <p className="font-mono font-bold text-gray-800">{code}</p>
-                      <p className="text-gray-600 capitalize">{user.role}</p>
-                    </div>
-                  </div>
-                ))}
+                <div className="p-2 bg-white rounded border">
+                  <strong>ADMIN001</strong><br />
+                  <span className="text-gray-600">Admin User</span>
+                </div>
+                <div className="p-2 bg-white rounded border">
+                  <strong>CHEF001</strong><br />
+                  <span className="text-gray-600">Chef John</span>
+                </div>
+                <div className="p-2 bg-white rounded border">
+                  <strong>WAITER001</strong><br />
+                  <span className="text-gray-600">Sarah Waiter</span>
+                </div>
+                <div className="p-2 bg-white rounded border">
+                  <strong>TABLE001</strong><br />
+                  <span className="text-gray-600">Table 1 Customer</span>
+                </div>
+                <div className="p-2 bg-white rounded border">
+                  <strong>TABLE002</strong><br />
+                  <span className="text-gray-600">Table 2 Customer</span>
+                </div>
               </div>
             </div>
           )}

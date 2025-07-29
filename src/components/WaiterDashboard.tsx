@@ -1,7 +1,7 @@
 import React from 'react';
 import { UserCheck, Users, ShoppingCart, Bell, CheckCircle } from 'lucide-react';
 import { User, Order, Table } from './types';
-import { formatCurrency, getStatusColor, getTableStatusColor } from './utils';
+import { formatCurrency, getOrderStatusColor, getTableStatusColor } from './utils';
 
 interface WaiterDashboardProps {
   currentUser: User;
@@ -99,7 +99,7 @@ const WaiterDashboard: React.FC<WaiterDashboardProps> = ({
                       <p className="text-xs text-gray-500">{order.items.length} items • {formatCurrency(order.total)}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getOrderStatusColor(order.status)}`}>
                         {order.status}
                       </span>
                       {order.estimatedTime && (

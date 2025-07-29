@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { User, MenuItem, CartItem, Order, Table, Notification } from './types';
+import { User, MenuItem, CartItem, Order, Table, Notification, MenuCustomization, MenuAddOn, Restaurant } from './types';
 import { addNotification } from './utils';
 import NotificationToast from './NotificationToast';
 import QRScanner from './QRScanner';
@@ -8,23 +8,26 @@ import CustomerInterface from './CustomerInterface';
 import AdminDashboard from './AdminDashboard';
 import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
-import { userService, orderService, tableService } from '../lib/database';
-import { dummyUsers } from './data';
+import OnboardingPage from './OnboardingPage';
+import LandingPage from './LandingPage';
+import { orderService, tableService, userService } from '../lib/database';
 
 const RestaurantManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [showLanding, setShowLanding] = useState(true);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const [qrInput, setQrInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [showQrCodes, setShowQrCodes] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [showQrCodes, setShowQrCodes] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [users, setUsers] = useState<Record<string, User>>({});
-
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
   // Fetch initial data from Supabase
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -61,7 +64,7 @@ const RestaurantManagementSystem = () => {
     
     setTimeout(() => {
       // Use users from state, or fallback to dummy data if not loaded yet
-      const availableUsers = Object.keys(users).length > 0 ? users : dummyUsers;
+      const availableUsers = Object.keys(users).length > 0 ? users : {};
       const codes = Object.keys(availableUsers);
       const randomCode = codes[Math.floor(Math.random() * codes.length)];
       setQrInput(randomCode);
@@ -73,7 +76,7 @@ const RestaurantManagementSystem = () => {
 
   const handleQrScan = () => {
     // Use users from state, or fallback to dummy data if not loaded yet
-    const availableUsers = Object.keys(users).length > 0 ? users : dummyUsers;
+    const availableUsers = Object.keys(users).length > 0 ? users : {};
     const user = availableUsers[qrInput.toUpperCase()];
     
     if (user) {
@@ -89,7 +92,7 @@ const RestaurantManagementSystem = () => {
     }
   };
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (item: MenuItem, customization?: MenuCustomization | null, addOns?: MenuAddOn[], specialNotes?: string) => {
     const existingItem = cart.find(cartItem => cartItem.id === item.id);
     if (existingItem) {
       setCart(cart.map(cartItem => 
@@ -98,7 +101,14 @@ const RestaurantManagementSystem = () => {
           : cartItem
       ));
     } else {
-      setCart([...cart, { ...item, quantity: 1 }]);
+      const cartItem: CartItem = {
+        ...item,
+        quantity: 1,
+        special_notes: specialNotes,
+        selected_customization: customization || undefined,
+        selected_add_ons: addOns || []
+      };
+      setCart([...cart, cartItem]);
     }
     addNotification(notifications, setNotifications, `${item.name} added to cart!`, 'success');
   };
@@ -141,13 +151,27 @@ const RestaurantManagementSystem = () => {
         const simulatedOrder: Order = {
           id: orders.length + 1,
           table: currentUser.table || 1,
-          customerName: currentUser.name,
-          items: [...cart],
-          status: 'pending',
-          waiter: 'Sarah Waiter',
+          customer_name: currentUser.name,
+          items: cart.map((item, index) => ({
+            id: index + 1,
+            order_id: orders.length + 1,
+            menu_item: item,
+            quantity: item.quantity,
+            special_notes: item.special_notes,
+            selected_customization: item.selected_customization,
+            selected_add_ons: item.selected_add_ons,
+            status: 'order_received' as const,
+            kitchen_station: item.kitchen_stations?.[0] || 'Main Kitchen',
+            price_at_time: item.price
+          })),
+          status: 'active' as const,
+          waiter_id: undefined,
+          waiter_name: undefined,
           timestamp: new Date(),
           total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-          estimatedTime: Math.max(...cart.map(item => item.prepTime)) + 5
+          estimated_time: Math.max(...cart.map(item => item.prepTime)) + 5,
+          is_joined_order: false,
+          parent_order_id: undefined
         };
         setOrders([simulatedOrder, ...orders]);
         setCart([]);
@@ -161,41 +185,61 @@ const RestaurantManagementSystem = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId: number, newStatus: string) => {
-    try {
-      const success = await orderService.updateOrderStatus(orderId, newStatus);
-      
-      if (success) {
-        setOrders(orders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        ));
-        
-        const statusMessages: Record<string, string> = {
-          'preparing': 'Order is now being prepared 👨‍🍳',
-          'ready': 'Order is ready for pickup! 🔔',
-          'delivered': 'Order delivered successfully ✅'
-        };
-        
-        addNotification(notifications, setNotifications, statusMessages[newStatus] || 'Order status updated', 'success');
-      } else {
-        // In development mode without Supabase, simulate status update
-        setOrders(orders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        ));
-        
-        const statusMessages: Record<string, string> = {
-          'preparing': 'Order is now being prepared 👨‍🍳',
-          'ready': 'Order is ready for pickup! 🔔',
-          'delivered': 'Order delivered successfully ✅'
-        };
-        
-        addNotification(notifications, setNotifications, `${statusMessages[newStatus] || 'Order status updated'} (Development Mode)`, 'success');
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      addNotification(notifications, setNotifications, 'Error updating order status', 'error');
+  const updateOrderStatus = (orderId: number, newStatus: string) => {
+    // Map the status string to the correct type
+    let status: 'active' | 'completed' | 'cancelled';
+    switch (newStatus) {
+      case 'active':
+      case 'completed':
+      case 'cancelled':
+        status = newStatus;
+        break;
+      default:
+        status = 'active';
     }
+    
+    setOrders(orders.map(order => 
+      order.id === orderId 
+        ? { ...order, status }
+        : order
+    ));
+    addNotification(notifications, setNotifications, `Order ${orderId} status updated to ${status}`, 'success');
   };
+
+  const handleStartOnboarding = () => {
+    setShowLanding(false);
+    setIsOnboarding(true);
+  };
+
+  const handleOnboardingComplete = (restaurantData: Restaurant, adminUser: User) => {
+    setRestaurant(restaurantData);
+    setCurrentUser(adminUser);
+    setIsOnboarding(false);
+    setShowLanding(false); // Ensure landing page is hidden
+    addNotification(notifications, setNotifications, `Welcome to ${restaurantData.name}! Setup complete. You can now scan QR codes to access the system.`, 'success');
+  };
+
+  // Landing Page
+  if (showLanding) {
+    return <LandingPage onStartOnboarding={handleStartOnboarding} />;
+  }
+
+  // Onboarding Page
+  if (isOnboarding) {
+    return (
+      <>
+        {/* Notifications 
+        {notifications.map(notification => (
+          <NotificationToast key={notification.id} notification={notification} />
+        ))}
+          */}
+        
+        <OnboardingPage
+          onComplete={handleOnboardingComplete}
+        />
+      </>
+    );
+  }
 
   // QR Scanner Interface
   if (!currentUser) {
@@ -207,15 +251,10 @@ const RestaurantManagementSystem = () => {
         ))}*/}
         
         <QRScanner
-          qrInput={qrInput}
-          setQrInput={setQrInput}
-          isScanning={isScanning}
-          loading={loading}
-          showQrCodes={showQrCodes}
-          setShowQrCodes={setShowQrCodes}
-          dummyUsers={Object.keys(users).length > 0 ? users : dummyUsers}
           onQrScan={handleQrScan}
           onSimulateQrScan={simulateQrScan}
+          currentUser={currentUser}
+          restaurant={restaurant}
         />
       </>
     );
