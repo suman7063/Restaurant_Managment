@@ -178,33 +178,4 @@ CREATE POLICY "Staff can update tables" ON restaurant_tables
     )
   );
 
--- Insert sample data
-INSERT INTO menu_items (name, price, category, prep_time, rating, image, popular) VALUES
-  ('Margherita Pizza', 599, 'Main', 15, 4.8, '🍕', true),
-  ('Caesar Salad', 399, 'Starter', 5, 4.5, '🥗', false),
-  ('Grilled Salmon', 899, 'Main', 20, 4.9, '🐟', true),
-  ('Chocolate Cake', 299, 'Dessert', 3, 4.7, '🍰', false),
-  ('Espresso Coffee', 199, 'Beverage', 2, 4.6, '☕', false),
-  ('Mushroom Risotto', 799, 'Main', 18, 4.4, '🍚', false),
-  ('Tiramisu', 399, 'Dessert', 3, 4.8, '🍮', true),
-  ('Fresh Juice', 249, 'Beverage', 3, 4.3, '🧃', false);
-
--- Insert sample tables
-INSERT INTO restaurant_tables (table_number, status, guests, revenue) VALUES
-  (1, 'occupied', 4, 2275),
-  (2, 'available', 0, 0),
-  (3, 'occupied', 2, 1297),
-  (4, 'cleaning', 0, 0),
-  (5, 'occupied', 3, 1597),
-  (6, 'available', 0, 0),
-  (7, 'available', 0, 0),
-  (8, 'occupied', 6, 4472);
-
--- Insert sample users
-INSERT INTO users (qr_code, name, table_number, role) VALUES
-  ('QR001', 'John Doe', 5, 'customer'),
-  ('QR002', 'Jane Smith', 3, 'customer'),
-  ('QR003', 'Bob Wilson', 7, 'customer'),
-  ('ADMIN001', 'Mike Admin', NULL, 'admin'),
-  ('WAITER001', 'Sarah Waiter', NULL, 'waiter'),
-  ('CHEF001', 'Gordon Chef', NULL, 'chef'); 
+-- No sample data - tables will be populated through the application 

@@ -1,9 +1,9 @@
-import { supabase, isSupabaseConfigured } from './supabase'
+import { supabase } from './supabase'
 import { User, MenuItem, Order, Table, CartItem, Notification, Restaurant, UserRole, Language } from '../components/types'
 
-// Database types that match Supabase schema
+// Database types that match Supabase schema with UUIDs
 export interface DatabaseUser {
-  id: string
+  id: string // UUID
   name: string
   email: string
   phone: string
@@ -17,7 +17,7 @@ export interface DatabaseUser {
 }
 
 export interface DatabaseMenuItem {
-  id: string
+  id: string // UUID
   name: string
   name_hi?: string
   name_kn?: string
@@ -34,14 +34,14 @@ export interface DatabaseMenuItem {
   kitchen_stations?: string[]
   is_veg: boolean
   cuisine_type: string
-  customizations?: any[]
-  add_ons?: any[]
+  customizations?: Record<string, unknown>[]
+  add_ons?: Record<string, unknown>[]
   created_at: string
   updated_at: string
 }
 
 export interface DatabaseOrder {
-  id: string
+  id: string // UUID
   table_number: number
   customer_name: string
   customer_phone?: string
@@ -51,22 +51,22 @@ export interface DatabaseOrder {
   total: number
   estimated_time: number | null
   is_joined_order: boolean
-  parent_order_id?: number
+  parent_order_id?: string // UUID
   created_at: string
   updated_at: string
 }
 
 export interface DatabaseOrderItem {
-  id: string
-  order_id: string
-  menu_item_id: string
+  id: string // UUID
+  order_id: string // UUID
+  menu_item_id: string // UUID
   quantity: number
   price_at_time: number
   created_at: string
 }
 
 export interface DatabaseTable {
-  id: string
+  id: string // UUID
   table_number: number
   status: string
   waiter_id: string | null
@@ -79,16 +79,32 @@ export interface DatabaseTable {
 }
 
 export interface DatabaseNotification {
-  id: string
+  id: string // UUID
   message: string
   message_hi?: string
   message_kn?: string
   type: string
   user_id: string | null
-  order_id?: number
-  item_id?: number
+  order_id?: string // UUID
+  item_id?: string // UUID
   read: boolean
   created_at: string
+}
+
+export interface DatabaseRestaurant {
+  id: string // UUID
+  name: string
+  address: string
+  city: string
+  state: string
+  phone: string
+  email: string
+  cuisine_type: string
+  languages: string[]
+  subscription_plan: string
+  subscription_status: string
+  created_at: string
+  updated_at: string
 }
 
 // User operations
@@ -103,7 +119,7 @@ export const userService = {
     if (error || !data) return null
 
     return {
-      id: parseInt(data.id),
+      id: data.id, // UUID - no need to parse
       name: data.name,
       email: data.email,
       phone: data.phone,
@@ -121,69 +137,17 @@ export const userService = {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error || !data || data.length === 0) {
-      // Fallback demo users for development
-      return [
-        {
-          id: 1,
-          name: 'Admin User',
-          email: 'admin@restaurant.com',
-          phone: '+1234567890',
-          table: undefined,
-          role: 'admin',
-          qr_code: 'ADMIN001',
-          language: 'en',
-          kitchen_station: undefined
-        },
-        {
-          id: 2,
-          name: 'Chef John',
-          email: 'chef@restaurant.com',
-          phone: '+1234567891',
-          table: undefined,
-          role: 'chef',
-          qr_code: 'CHEF001',
-          language: 'en',
-          kitchen_station: 'Main Kitchen'
-        },
-        {
-          id: 3,
-          name: 'Sarah Waiter',
-          email: 'waiter@restaurant.com',
-          phone: '+1234567892',
-          table: undefined,
-          role: 'waiter',
-          qr_code: 'WAITER001',
-          language: 'en',
-          kitchen_station: undefined
-        },
-        {
-          id: 4,
-          name: 'Table 1 Customer',
-          email: 'customer1@example.com',
-          phone: '+1234567893',
-          table: 1,
-          role: 'customer',
-          qr_code: 'TABLE001',
-          language: 'en',
-          kitchen_station: undefined
-        },
-        {
-          id: 5,
-          name: 'Table 2 Customer',
-          email: 'customer2@example.com',
-          phone: '+1234567894',
-          table: 2,
-          role: 'customer',
-          qr_code: 'TABLE002',
-          language: 'en',
-          kitchen_station: undefined
-        }
-      ];
+    if (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
     }
 
     return data.map(user => ({
-      id: parseInt(user.id),
+      id: user.id, // UUID - no need to parse
       name: user.name,
       email: user.email,
       phone: user.phone,
@@ -206,7 +170,8 @@ export const userService = {
       role: userData.role,
       language: userData.language || 'en',
       kitchen_station: userData.kitchen_station || null,
-      table_number: userData.table || null
+      // Only set table_number for customers, not for staff members
+      table_number: userData.role === 'customer' && userData.table ? parseInt(userData.table.toString()) : null
     };
     
     console.log('Insert data prepared:', insertData);
@@ -395,15 +360,15 @@ export const orderService = {
       table: order.table_number,
       customer_name: order.customer_name,
       customer_phone: order.customer_phone,
-      items: order.order_items.map((item: any) => ({
-        id: parseInt(item.menu_items.id),
-        name: item.menu_items.name,
-        price: item.price_at_time,
-        category: item.menu_items.category,
-        prepTime: item.menu_items.prep_time,
-        rating: item.menu_items.rating,
-        image: item.menu_items.image,
-        quantity: item.quantity
+      items: order.order_items.map((item: Record<string, unknown>) => ({
+        id: parseInt((item.menu_items as Record<string, unknown>).id as string),
+        name: (item.menu_items as Record<string, unknown>).name as string,
+        price: item.price_at_time as number,
+        category: (item.menu_items as Record<string, unknown>).category as string,
+        prepTime: (item.menu_items as Record<string, unknown>).prep_time as number,
+        rating: (item.menu_items as Record<string, unknown>).rating as number,
+        image: (item.menu_items as Record<string, unknown>).image as string,
+        quantity: item.quantity as number
       })),
       status: order.status as 'active' | 'completed' | 'cancelled',
       waiter_id: order.waiter_id,
@@ -435,15 +400,15 @@ export const orderService = {
       table: order.table_number,
       customer_name: order.customer_name,
       customer_phone: order.customer_phone,
-      items: order.order_items.map((item: any) => ({
-        id: parseInt(item.menu_items.id),
-        name: item.menu_items.name,
-        price: item.price_at_time,
-        category: item.menu_items.category,
-        prepTime: item.menu_items.prep_time,
-        rating: item.menu_items.rating,
-        image: item.menu_items.image,
-        quantity: item.quantity
+      items: order.order_items.map((item: Record<string, unknown>) => ({
+        id: parseInt((item.menu_items as Record<string, unknown>).id as string),
+        name: (item.menu_items as Record<string, unknown>).name as string,
+        price: item.price_at_time as number,
+        category: (item.menu_items as Record<string, unknown>).category as string,
+        prepTime: (item.menu_items as Record<string, unknown>).prep_time as number,
+        rating: (item.menu_items as Record<string, unknown>).rating as number,
+        image: (item.menu_items as Record<string, unknown>).image as string,
+        quantity: item.quantity as number
       })),
       status: order.status as 'active' | 'completed' | 'cancelled',
       waiter_id: order.waiter_id,
@@ -558,7 +523,7 @@ export const tableService = {
   },
 
   async updateTableStatus(tableNumber: number, status: string, waiterId?: string, guests?: number): Promise<boolean> {
-    const updateData: any = { status }
+    const updateData: Record<string, unknown> = { status }
     if (waiterId !== undefined) updateData.waiter_id = waiterId
     if (guests !== undefined) updateData.guests = guests
 
@@ -740,6 +705,12 @@ export const testUsersTable = async () => {
     
     if (error) {
       console.error('Error accessing users table:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return { success: false, error: error.message };
     }
     
@@ -747,6 +718,56 @@ export const testUsersTable = async () => {
     return { success: true, data };
   } catch (error) {
     console.error('Users table test failed:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+};
+
+// Test function to try creating a user directly
+export const testCreateUser = async () => {
+  try {
+    console.log('Testing user creation...');
+    
+    const testUser = {
+      qr_code: "TEST_ADMIN_" + Date.now(),
+      name: "Test Admin",
+      email: "test@example.com",
+      phone: "1234567890",
+      role: "admin",
+      language: "en",
+      kitchen_station: null,
+      table_number: null
+    };
+    
+    console.log('Attempting to create test user with data:', testUser);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert(testUser)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating test user:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return { success: false, error: error.message };
+    }
+    
+    console.log('Test user created successfully:', data);
+    
+    // Clean up - delete the test user
+    await supabase
+      .from('users')
+      .delete()
+      .eq('qr_code', testUser.qr_code);
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Test user creation failed:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }; 

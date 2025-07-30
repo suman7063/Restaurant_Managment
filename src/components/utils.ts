@@ -1,39 +1,17 @@
 import React from 'react';
 import { Notification, Language } from './types';
-import { translations } from './data';
 import { v4 as uuidv4 } from 'uuid';
-
-// Language utilities
-export const getTranslation = (key: string, language: Language = 'en'): string => {
-  const langTranslations = translations[language] as Record<string, string>;
-  return langTranslations[key] || (translations.en as Record<string, string>)[key] || key;
-};
-
-export const getLocalizedName = (item: any, language: Language = 'en'): string => {
-  if (!item) return '';
-  
-  const nameKey = `name_${language}`;
-  return item[nameKey] || item.name || '';
-};
-
-export const getLocalizedDescription = (item: any, language: Language = 'en'): string => {
-  if (!item) return '';
-  
-  const descKey = `description_${language}`;
-  return item[descKey] || item.description || '';
-};
 
 // Notification utilities
 export const addNotification = (
   notifications: Notification[],
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>,
   message: string,
-  type: 'success' | 'error' | 'warning' | 'info' = 'info',
-  language: Language = 'en'
+  type: 'success' | 'error' | 'warning' | 'info' = 'info'
 ) => {
   const newNotification: Notification = {
     id: Date.now(),
-    message: getTranslation(message, language),
+    message: message,
     type,
     read: false,
     created_at: new Date()

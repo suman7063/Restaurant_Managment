@@ -1,6 +1,6 @@
 // Type definitions for Restaurant Management System
 export interface User {
-  id: number;
+  id: string; // UUID
   name: string;
   email: string;
   phone: string;
@@ -12,7 +12,7 @@ export interface User {
 }
 
 export interface MenuItem {
-  id: number;
+  id: string; // UUID
   name: string;
   name_hi?: string; // Hindi translation
   name_kn?: string; // Kannada translation
@@ -34,7 +34,7 @@ export interface MenuItem {
 }
 
 export interface MenuCustomization {
-  id: number;
+  id: string; // UUID
   name: string;
   name_hi?: string;
   name_kn?: string;
@@ -43,8 +43,8 @@ export interface MenuCustomization {
 }
 
 export interface MenuAddOn {
-  id: number;
-  menu_item_id: number;
+  id: string; // UUID
+  menu_item_id: string; // UUID
   name: string;
   name_hi?: string;
   name_kn?: string;
@@ -60,8 +60,8 @@ export interface CartItem extends MenuItem {
 }
 
 export interface OrderItem {
-  id: number;
-  order_id: number;
+  id: string; // UUID
+  order_id: string; // UUID
   menu_item: MenuItem;
   quantity: number;
   special_notes?: string;
@@ -76,26 +76,26 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: number;
+  id: string; // UUID
   table: number;
   customer_name: string;
   customer_phone?: string;
   items: OrderItem[];
   status: 'active' | 'completed' | 'cancelled';
-  waiter_id?: string;
+  waiter_id?: string; // UUID
   waiter_name?: string;
   timestamp: Date;
   total: number;
   estimated_time: number;
   is_joined_order: boolean; // Whether this is part of a joined table order
-  parent_order_id?: number; // For joined orders
+  parent_order_id?: string; // UUID for joined orders
 }
 
 export interface Table {
-  id: number;
+  id: string; // UUID
   table_number: number;
   status: 'available' | 'occupied' | 'needs_reset';
-  waiter_id?: string;
+  waiter_id?: string; // UUID
   waiter_name?: string;
   guests: number;
   revenue: number;
@@ -106,7 +106,7 @@ export interface Table {
 }
 
 export interface KitchenStation {
-  id: number;
+  id: string; // UUID
   name: string;
   name_hi?: string;
   name_kn?: string;
@@ -116,20 +116,20 @@ export interface KitchenStation {
 }
 
 export interface Notification {
-  id: number;
+  id: string; // UUID
   message: string;
   message_hi?: string;
   message_kn?: string;
   type: 'success' | 'error' | 'warning' | 'info';
-  user_id?: string;
-  order_id?: number;
-  item_id?: number;
+  user_id?: string; // UUID
+  order_id?: string; // UUID
+  item_id?: string; // UUID
   read: boolean;
   created_at: Date;
 }
 
 export interface Restaurant {
-  id: number;
+  id: string; // UUID
   name: string;
   address: string;
   city: string;

@@ -32,7 +32,7 @@ interface CustomerInterfaceProps {
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
   onAddToCart: (item: MenuItem, customization?: MenuCustomization | null, addOns?: MenuAddOn[], specialNotes?: string) => void;
-  onUpdateQuantity: (itemId: number, newQuantity: number) => void;
+  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
   onPlaceOrder: () => void;
 }
 

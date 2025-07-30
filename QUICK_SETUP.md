@@ -2,23 +2,31 @@
 
 Your restaurant management system is now ready to run! Here's how to get started:
 
-## ✅ Immediate Setup (Development Mode)
+## ✅ Setup Required
 
-The application will work immediately with dummy data. Just run:
+The application requires Supabase setup to work. Follow these steps:
 
+### Step 1: Set up Supabase
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get your Project URL and Anon Key from Settings → API
+3. Create `.env.local` file with your credentials
+
+### Step 2: Set up the database
+1. Go to Supabase dashboard → SQL Editor
+2. Run the contents of `supabase/schema.sql`
+3. This creates all necessary tables
+
+### Step 3: Start the application
 ```bash
 npm run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Test QR Codes (Work immediately):
-- `QR001` - John Doe (Customer at Table 5)
-- `QR002` - Jane Smith (Customer at Table 3)  
-- `QR003` - Bob Wilson (Customer at Table 7)
-- `ADMIN001` - Mike Admin (Admin)
-- `WAITER001` - Sarah Waiter (Waiter)
-- `CHEF001` - Gordon Chef (Chef)
+### Step 4: Complete onboarding
+1. Go through the onboarding process
+2. Create your restaurant and admin account
+3. Use the generated QR codes to access the system
 
 ## 🔧 Full Supabase Setup (Optional)
 
@@ -55,19 +63,22 @@ To use real database functionality:
 - Real-time order tracking
 - Table management
 
-### 🔄 Development vs Production Mode:
-- **Development Mode**: Uses dummy data, works immediately
-- **Production Mode**: Uses Supabase database, requires setup
+### 🔄 Real Data Only:
+- **All data** comes from Supabase database
+- **No dummy data** - everything is real and persistent
+- **Requires proper setup** before use
 
 ## 🐛 Troubleshooting
 
 ### If you see console warnings:
-- The app is running in development mode with dummy data
-- This is normal and expected without Supabase setup
-- All features will work with simulated data
+- Check that your Supabase credentials are properly configured
+- Ensure the database schema has been run
+- Verify your `.env.local` file exists with correct values
 
-### If you want to use real database:
-- Follow the Supabase setup steps above
+### If you see 500 errors:
+- Run the database migration scripts
+- Check that all tables exist in your Supabase project
+- Verify RLS policies are properly configured
 - The app will automatically switch to database mode
 - All data will be persistent and real-time
 

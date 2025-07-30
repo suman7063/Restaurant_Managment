@@ -7,7 +7,7 @@ interface ChefDashboardProps {
   currentUser: User;
   setCurrentUser: (user: User | null) => void;
   orders: Order[];
-  onUpdateOrderStatus: (orderId: number, newStatus: string) => void;
+  onUpdateOrderStatus: (orderId: string, newStatus: string) => void;
 }
 
 const ChefDashboard: React.FC<ChefDashboardProps> = ({

@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Building2, 
   User, 
@@ -14,11 +15,8 @@ import {
 import { Restaurant, User as UserType, SubscriptionPlan } from './types';
 import { userService, restaurantService, testSupabaseConnection, testUsersTable } from '../lib/database';
 
-interface OnboardingPageProps {
-  onComplete: (restaurant: Restaurant, adminUser: UserType) => void;
-}
-
-const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
+const OnboardingPage: React.FC = () => {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -117,11 +115,14 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return Boolean(restaurantData.name && restaurantData.address && restaurantData.phone && restaurantData.email);
+        return Boolean(
+          restaurantData.name && restaurantData.address && restaurantData.phone && restaurantData.email &&
+          adminData.name && adminData.password && adminData.password === adminData.confirmPassword
+        );
       case 2:
-        return Boolean(adminData.name && adminData.email && adminData.phone && adminData.password && adminData.password === adminData.confirmPassword);
-      case 3:
         return Boolean(restaurantData.subscription_plan);
+      case 3:
+        return true; // Review step
       default:
         return true;
     }
@@ -169,15 +170,16 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
       if (createdRestaurant) {
         console.log('Restaurant created successfully, creating admin user...');
         // Create admin user
-        const adminUser: Omit<UserType, 'id'> = {
+        const adminUser: Omit<UserType, 'id'> & { password: string } = {
           name: adminData.name,
-          email: adminData.email,
-          phone: adminData.phone,
+          email: restaurantData.email,
+          phone: restaurantData.phone,
           role: 'admin',
           qr_code: `ADMIN_${Date.now()}`,
           language: restaurantData.languages[0] as 'en' | 'hi' | 'kn',
           kitchen_station: undefined,
-          table: undefined
+          table: undefined,
+          password: adminData.password
         };
 
         console.log('Admin user data to create:', adminUser);
@@ -202,9 +204,9 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
           console.log('Both restaurant and user created successfully!');
           setAdminQRCode(createdUser.qr_code);
           setIsComplete(true);
-          // Call onComplete after a short delay to show success message
+          // Redirect to admin login page after a short delay to show success message
           setTimeout(() => {
-            onComplete(createdRestaurant, createdUser);
+            router.push('/admin/login');
           }, 3000);
         } else {
           throw new Error('Failed to create admin user');
@@ -235,217 +237,177 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
   };
 
   const renderStep1 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <Building2 className="mx-auto w-12 h-12 text-indigo-600 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900">Restaurant Information</h2>
-        <p className="text-gray-600 mt-2">Tell us about your restaurant</p>
-      </div>
-
-      {/* Debug section - remove in production */}
-      <div className="bg-yellow-100 p-4 rounded-md text-sm">
-        <p className="font-bold">Debug Info:</p>
-        <p>Restaurant Name: &ldquo;{restaurantData.name}&rdquo;</p>
-        <p>Address: &ldquo;{restaurantData.address}&rdquo;</p>
-        <p>Phone: &ldquo;{restaurantData.phone}&rdquo;</p>
-        <p>Email: &ldquo;{restaurantData.email}&rdquo;</p>
-        <button 
-          onClick={handleTestConnection}
-          className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-        >
-          Test Supabase Connection
-        </button>
-        <button 
-          onClick={handleTestUsersTable}
-          className="mt-2 ml-2 px-3 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600"
-        >
-          Test Users Table
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name *</label>
-          <input
-            type="text"
-            required
-            value={restaurantData.name}
-            onChange={(e) => handleRestaurantChange('name', e.target.value)}
-            className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter restaurant name"
-          />
+    <div className="space-y-8">
+      {/* Restaurant Information Section */}
+      <div className="space-y-6">
+        <div className="text-center">
+          <Building2 className="mx-auto w-12 h-12 text-indigo-600 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900">Restaurant & Admin Setup</h2>
+          <p className="text-gray-600 mt-2">Configure your restaurant and admin account</p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
-                      <select
-              value={restaurantData.cuisine_type}
-              onChange={(e) => handleRestaurantChange('cuisine_type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            >
-            <option value="Indian">Indian</option>
-            <option value="Chinese">Chinese</option>
-            <option value="Italian">Italian</option>
-            <option value="Mexican">Mexican</option>
-            <option value="American">American</option>
-            <option value="Thai">Thai</option>
-            <option value="Japanese">Japanese</option>
-            <option value="Other">Other</option>
-          </select>
+        <div className="bg-gray-50 rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Restaurant Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Name *</label>
+              <input
+                type="text"
+                required
+                value={restaurantData.name}
+                onChange={(e) => handleRestaurantChange('name', e.target.value)}
+                className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter restaurant name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine Type</label>
+              <select
+                value={restaurantData.cuisine_type}
+                onChange={(e) => handleRestaurantChange('cuisine_type', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+              >
+                <option value="Indian">Indian</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Italian">Italian</option>
+                <option value="Mexican">Mexican</option>
+                <option value="American">American</option>
+                <option value="Thai">Thai</option>
+                <option value="Japanese">Japanese</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+              <input
+                type="text"
+                value={restaurantData.address}
+                onChange={(e) => handleRestaurantChange('address', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter full address"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+              <input
+                type="text"
+                value={restaurantData.city}
+                onChange={(e) => handleRestaurantChange('city', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter city"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+              <input
+                type="text"
+                value={restaurantData.state}
+                onChange={(e) => handleRestaurantChange('state', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter state"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+              <input
+                type="tel"
+                value={restaurantData.phone}
+                onChange={(e) => handleRestaurantChange('phone', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter phone number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+              <input
+                type="email"
+                value={restaurantData.email}
+                onChange={(e) => handleRestaurantChange('email', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter email address"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { code: 'en', name: 'English' },
+                { code: 'hi', name: 'Hindi' },
+                { code: 'kn', name: 'Kannada' }
+              ].map(lang => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => handleLanguageToggle(lang.code)}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    restaurantData.languages.includes(lang.code)
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {lang.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">English is required and will be used as the default language</p>
+          </div>
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-          <input
-            type="text"
-            value={restaurantData.address}
-            onChange={(e) => handleRestaurantChange('address', e.target.value)}
-            className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter full address"
-          />
-        </div>
+        {/* Admin Account Section */}
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Admin Account</h3>
+          <p className="text-sm text-gray-600 mb-4">The admin account will use the same contact information as the restaurant.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+              <input
+                type="text"
+                value={adminData.name}
+                onChange={(e) => handleAdminChange('name', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                placeholder="Enter your full name"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-          <input
-            type="text"
-            value={restaurantData.city}
-            onChange={(e) => handleRestaurantChange('city', e.target.value)}
-            className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter city"
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+              <input
+                type="password"
+                value={adminData.password}
+                onChange={(e) => handleAdminChange('password', e.target.value)}
+                className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Create a password"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-          <input
-            type="text"
-            value={restaurantData.state}
-            onChange={(e) => handleRestaurantChange('state', e.target.value)}
-            className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Enter state"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-          <input
-            type="tel"
-            value={restaurantData.phone}
-            onChange={(e) => handleRestaurantChange('phone', e.target.value)}
-            className="w-full px-3 py-2 border  border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter phone number"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-          <input
-            type="email"
-            value={restaurantData.email}
-            onChange={(e) => handleRestaurantChange('email', e.target.value)}
-            className="w-full px-3 py-2 border  border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter email address"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { code: 'en', name: 'English' },
-            { code: 'hi', name: 'Hindi' },
-            { code: 'kn', name: 'Kannada' }
-          ].map(lang => (
-            <button
-              key={lang.code}
-              type="button"
-              onClick={() => handleLanguageToggle(lang.code)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                restaurantData.languages.includes(lang.code)
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {lang.name}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">English is required and will be used as the default language</p>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <User className="mx-auto w-12 h-12 text-indigo-600 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900">Admin Account</h2>
-        <p className="text-gray-600 mt-2">Create your admin account</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-          <input
-            type="text"
-            value={adminData.name}
-            onChange={(e) => handleAdminChange('name', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter your full name"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-          <input
-            type="email"
-            value={adminData.email}
-            onChange={(e) => handleAdminChange('email', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-            placeholder="Enter your email"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-          <input
-            type="tel"
-            value={adminData.phone}
-            onChange={(e) => handleAdminChange('phone', e.target.value)}
-            className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Enter your phone number"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-          <input
-            type="password"
-            value={adminData.password}
-            onChange={(e) => handleAdminChange('password', e.target.value)}
-            className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Create a password"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
-          <input
-            type="password"
-            value={adminData.confirmPassword}
-            onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
-            className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Confirm your password"
-          />
-          {adminData.confirmPassword && adminData.password !== adminData.confirmPassword && (
-            <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
-          )}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+              <input
+                type="password"
+                value={adminData.confirmPassword}
+                onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
+                className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Confirm your password"
+              />
+              {adminData.confirmPassword && adminData.password !== adminData.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
+
+
 
   const renderStep3 = () => (
     <div className="space-y-6">
@@ -493,7 +455,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
       </div>
 
       <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-        <div>
+        <div className="text-black">
           <h3 className="font-semibold text-gray-900 mb-2">Restaurant Details</h3>
           <p><strong>Name:</strong> {restaurantData.name}</p>
           <p><strong>Address:</strong> {restaurantData.address}</p>
@@ -503,14 +465,14 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
           <p><strong>Languages:</strong> {restaurantData.languages.map(l => l.toUpperCase()).join(', ')}</p>
         </div>
 
-        <div>
+        <div className="text-black">
           <h3 className="font-semibold text-gray-900 mb-2">Admin Account</h3>
           <p><strong>Name:</strong> {adminData.name}</p>
-          <p><strong>Email:</strong> {adminData.email}</p>
-          <p><strong>Phone:</strong> {adminData.phone}</p>
+          <p><strong>Email:</strong> {restaurantData.email}</p>
+          <p><strong>Phone:</strong> {restaurantData.phone}</p>
         </div>
 
-        <div>
+        <div className="text-black">
           <h3 className="font-semibold text-gray-900 mb-2">Subscription Plan</h3>
           <p><strong>Plan:</strong> {subscriptionPlans.find(p => p.id === restaurantData.subscription_plan)?.name}</p>
           <p><strong>Price:</strong> {subscriptionPlans.find(p => p.id === restaurantData.subscription_plan)?.price}</p>
@@ -557,11 +519,9 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
       case 1:
         return renderStep1();
       case 2:
-        return renderStep2();
+        return renderStep3(); // Subscription plan selection
       case 3:
-        return renderStep3();
-      case 4:
-        return renderStep4();
+        return renderStep4(); // Review step
       default:
         return null;
     }
@@ -576,7 +536,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
           {/* Progress indicator */}
           <div className="max-w-2xl mx-auto mb-8">
             <div className="flex justify-between items-center mb-4">
-              {[1, 2, 3, 4].map((step) => (
+              {[1, 2, 3].map((step) => (
                 <div
                   key={step}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -590,7 +550,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
               ))}
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600">Step {currentStep} of 4</p>
+              <p className="text-sm text-gray-600">Step {currentStep} of 3</p>
             </div>
           </div>
 
@@ -609,7 +569,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) => {
               ← Back
             </button>
             
-            {currentStep < 4 ? (
+            {currentStep < 3 ? (
               <button
                 onClick={handleNext}
                 disabled={!validateStep(currentStep)}

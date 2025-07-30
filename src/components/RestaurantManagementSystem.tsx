@@ -2,14 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { User, MenuItem, CartItem, Order, Table, Notification, MenuCustomization, MenuAddOn, Restaurant } from './types';
 import { addNotification } from './utils';
-import NotificationToast from './NotificationToast';
 import QRScanner from './QRScanner';
 import CustomerInterface from './CustomerInterface';
 import AdminDashboard from './AdminDashboard';
 import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
 import OnboardingPage from './OnboardingPage';
+import AnimatedOnboardingPage from './AnimatedOnboardingPage';
 import LandingPage from './LandingPage';
+
 import { orderService, tableService, userService } from '../lib/database';
 
 const RestaurantManagementSystem = () => {
@@ -17,6 +18,7 @@ const RestaurantManagementSystem = () => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [showLanding, setShowLanding] = useState(true);
   const [isOnboarding, setIsOnboarding] = useState(false);
+
   const [qrInput, setQrInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,9 +30,14 @@ const RestaurantManagementSystem = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
-  // Fetch initial data from Supabase
+  // Fetch initial data from Supabase only when not in onboarding
   useEffect(() => {
     const fetchInitialData = async () => {
+      // Don't fetch data if we're in onboarding or showing landing page
+      if (isOnboarding || showLanding) {
+        return;
+      }
+      
       try {
         const [ordersData, tablesData, usersData] = await Promise.all([
           orderService.getAllOrders(),
@@ -55,7 +62,7 @@ const RestaurantManagementSystem = () => {
     };
 
     fetchInitialData();
-  }, []);
+  }, [isOnboarding, showLanding]);
 
   // Simulate QR scanning
   const simulateQrScan = () => {
@@ -63,9 +70,13 @@ const RestaurantManagementSystem = () => {
     setLoading(true);
     
     setTimeout(() => {
-      // Use users from state, or fallback to dummy data if not loaded yet
-      const availableUsers = Object.keys(users).length > 0 ? users : {};
-      const codes = Object.keys(availableUsers);
+      const codes = Object.keys(users);
+      if (codes.length === 0) {
+        setIsScanning(false);
+        setLoading(false);
+        addNotification(notifications, setNotifications, 'No users available. Please complete onboarding first.', 'warning');
+        return;
+      }
       const randomCode = codes[Math.floor(Math.random() * codes.length)];
       setQrInput(randomCode);
       setIsScanning(false);
@@ -75,9 +86,7 @@ const RestaurantManagementSystem = () => {
   };
 
   const handleQrScan = () => {
-    // Use users from state, or fallback to dummy data if not loaded yet
-    const availableUsers = Object.keys(users).length > 0 ? users : {};
-    const user = availableUsers[qrInput.toUpperCase()];
+    const user = users[qrInput.toUpperCase()];
     
     if (user) {
       setLoading(true);
@@ -113,7 +122,7 @@ const RestaurantManagementSystem = () => {
     addNotification(notifications, setNotifications, `${item.name} added to cart!`, 'success');
   };
 
-  const removeFromCart = (itemId: number) => {
+  const removeFromCart = (itemId: string) => {
     const item = cart.find(item => item.id === itemId);
     setCart(cart.filter(item => item.id !== itemId));
     if (item) {
@@ -121,7 +130,7 @@ const RestaurantManagementSystem = () => {
     }
   };
 
-  const updateQuantity = (itemId: number, newQuantity: number) => {
+  const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
       removeFromCart(itemId);
     } else {
@@ -149,12 +158,12 @@ const RestaurantManagementSystem = () => {
       } else {
         // In development mode without Supabase, simulate order creation
         const simulatedOrder: Order = {
-          id: orders.length + 1,
+          id: `order_${Date.now()}`,
           table: currentUser.table || 1,
           customer_name: currentUser.name,
           items: cart.map((item, index) => ({
-            id: index + 1,
-            order_id: orders.length + 1,
+            id: `item_${Date.now()}_${index}`,
+            order_id: `order_${Date.now()}`,
             menu_item: item,
             quantity: item.quantity,
             special_notes: item.special_notes,
@@ -185,7 +194,7 @@ const RestaurantManagementSystem = () => {
     }
   };
 
-  const updateOrderStatus = (orderId: number, newStatus: string) => {
+  const updateOrderStatus = (orderId: string, newStatus: string) => {
     // Map the status string to the correct type
     let status: 'active' | 'completed' | 'cancelled';
     switch (newStatus) {
@@ -211,13 +220,7 @@ const RestaurantManagementSystem = () => {
     setIsOnboarding(true);
   };
 
-  const handleOnboardingComplete = (restaurantData: Restaurant, adminUser: User) => {
-    setRestaurant(restaurantData);
-    setCurrentUser(adminUser);
-    setIsOnboarding(false);
-    setShowLanding(false); // Ensure landing page is hidden
-    addNotification(notifications, setNotifications, `Welcome to ${restaurantData.name}! Setup complete. You can now scan QR codes to access the system.`, 'success');
-  };
+
 
   // Landing Page
   if (showLanding) {
@@ -234,9 +237,7 @@ const RestaurantManagementSystem = () => {
         ))}
           */}
         
-        <OnboardingPage
-          onComplete={handleOnboardingComplete}
-        />
+        <AnimatedOnboardingPage />
       </>
     );
   }

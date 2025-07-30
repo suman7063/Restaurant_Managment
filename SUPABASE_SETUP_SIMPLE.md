@@ -45,24 +45,24 @@ npm run dev
 - `restaurant_tables` - Table management
 - `notifications` - System messages
 
-### **Sample Data:**
-- 6 users (3 customers, 3 staff)
-- 8 menu items
-- 2 sample orders
-- 8 restaurant tables
+### **Clean Database:**
+- No sample data - tables start empty
+- All data will be created through the application
+- Users created during onboarding
+- Menu items added through admin interface
 
 ### **Security:**
 - Row Level Security (RLS) enabled
 - Proper access controls for each role
 
-## 🔑 Test QR Codes (After Setup)
+## 🔑 Using the System
 
-- `QR001` - John Doe (Customer)
-- `QR002` - Jane Smith (Customer)
-- `QR003` - Bob Wilson (Customer)
-- `ADMIN001` - Mike Admin (Admin)
-- `WAITER001` - Sarah Waiter (Waiter)
-- `CHEF001` - Gordon Chef (Chef)
+After setup, you'll need to:
+
+1. **Complete onboarding** to create your restaurant and admin account
+2. **Use the generated QR codes** from the onboarding process
+3. **Add menu items** through the admin dashboard
+4. **Create additional users** as needed through the admin interface
 
 ## ✅ Success Indicators
 

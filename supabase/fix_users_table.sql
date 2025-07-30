@@ -20,7 +20,7 @@ CREATE TABLE users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255),
   phone VARCHAR(50),
-  role VARCHAR(50) NOT NULL CHECK (role IN ('customer', 'admin', 'waiter', 'chef')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('customer', 'admin', 'waiter', 'chef', 'owner')),
   language VARCHAR(10) DEFAULT 'en' CHECK (language IN ('en', 'hi', 'kn')),
   kitchen_station VARCHAR(100),
   table_number INTEGER,
@@ -214,21 +214,7 @@ BEGIN
     END IF;
 END $$;
 
--- Insert sample data
-INSERT INTO menu_items (name, price, category, prep_time, rating, image, popular) VALUES
-  ('Margherita Pizza', 599, 'Main', 15, 4.8, '🍕', true),
-  ('Caesar Salad', 399, 'Starter', 5, 4.5, '🥗', false),
-  ('Grilled Salmon', 899, 'Main', 20, 4.9, '🐟', true),
-  ('Chocolate Cake', 299, 'Dessert', 3, 4.7, '🍰', false),
-  ('Espresso Coffee', 199, 'Beverage', 2, 4.6, '☕', false);
-
--- Insert sample tables
-INSERT INTO restaurant_tables (table_number, status, guests, revenue) VALUES
-  (1, 'available', 0, 0),
-  (2, 'available', 0, 0),
-  (3, 'available', 0, 0),
-  (4, 'available', 0, 0),
-  (5, 'available', 0, 0);
+-- No sample data - tables will be populated through the application
 
 -- Verify the structure
 SELECT 'Users table structure:' as info;
