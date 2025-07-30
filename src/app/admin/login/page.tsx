@@ -27,7 +27,6 @@ export default function AdminLoginPage() {
           email: email,
           phone: '',
           role: 'admin',
-          qr_code: 'ADMIN_QR',
           language: 'en',
           kitchen_station: undefined,
           table: undefined

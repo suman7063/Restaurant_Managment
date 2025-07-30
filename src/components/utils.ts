@@ -1,5 +1,5 @@
 import React from 'react';
-import { Notification, Language } from './types';
+import { Notification, Language, CartItem, MenuAddOn } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Notification utilities
@@ -33,7 +33,7 @@ export const generateQRCode = (data: string): string => {
 };
 
 // Order utilities
-export const calculateOrderTotal = (items: any[]): number => {
+export const calculateOrderTotal = (items: CartItem[]): number => {
   return items.reduce((total, item) => {
     let itemTotal = item.price * item.quantity;
     
@@ -44,7 +44,7 @@ export const calculateOrderTotal = (items: any[]): number => {
     
     // Add add-ons price
     if (item.selected_add_ons) {
-      itemTotal += item.selected_add_ons.reduce((addOnTotal: number, addOn: any) => {
+      itemTotal += item.selected_add_ons.reduce((addOnTotal: number, addOn: MenuAddOn) => {
         return addOnTotal + (addOn.price * item.quantity);
       }, 0);
     }
@@ -137,7 +137,7 @@ export const validateSpecialNotes = (notes: string): boolean => {
 
 // Kitchen station utilities
 export const getKitchenStationName = (station: string, language: Language = 'en'): string => {
-  const stationMap: Record<string, any> = {
+  const stationMap: Record<string, Record<Language, string>> = {
     'Main Kitchen': {
       en: 'Main Kitchen',
       hi: 'मुख्य रसोई',
@@ -160,7 +160,7 @@ export const getKitchenStationName = (station: string, language: Language = 'en'
 
 // Menu category utilities
 export const getCategoryName = (category: string, language: Language = 'en'): string => {
-  const categoryMap: Record<string, any> = {
+  const categoryMap: Record<string, Record<Language, string>> = {
     'Appetizer': {
       en: 'Appetizer',
       hi: 'शुरुआती',
@@ -196,10 +196,10 @@ export const createSocketConnection = () => {
   // In a real implementation, this would connect to a Socket.IO server
   // For now, return a mock socket
   return {
-    emit: (event: string, data: any) => {
+    emit: (event: string, data: unknown) => {
       console.log(`Socket emit: ${event}`, data);
     },
-    on: (event: string, callback: (data: any) => void) => {
+    on: (event: string, callback: (data: unknown) => void) => {
       console.log(`Socket listening: ${event}`);
     },
     disconnect: () => {
@@ -209,7 +209,7 @@ export const createSocketConnection = () => {
 };
 
 // Local storage utilities
-export const saveToLocalStorage = (key: string, value: any): void => {
+export const saveToLocalStorage = (key: string, value: string | number | boolean | object): void => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
@@ -217,7 +217,7 @@ export const saveToLocalStorage = (key: string, value: any): void => {
   }
 };
 
-export const getFromLocalStorage = (key: string): any => {
+export const getFromLocalStorage = (key: string): string | number | boolean | object | null => {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : null;
@@ -236,9 +236,9 @@ export const formatCurrency = (amount: number, currency: string = 'INR'): string
 };
 
 // Debounce utility
-export const debounce = (func: Function, wait: number) => {
+export const debounce = <T extends (...args: unknown[]) => void>(func: T, wait: number) => {
   let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
+  return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       clearTimeout(timeout);
       func(...args);

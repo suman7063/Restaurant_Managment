@@ -46,7 +46,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQrScan, currentUser, restaurant
             </p>
             <div className="bg-blue-50 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Admin QR Code:</strong> {currentUser?.qr_code}
+                <strong>Welcome:</strong> {currentUser?.name} ({currentUser?.role})
               </p>
             </div>
             <button

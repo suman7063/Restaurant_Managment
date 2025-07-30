@@ -4,25 +4,25 @@ import { User, MenuItem, CartItem, Order, Table, Notification, MenuCustomization
 import { addNotification } from './utils';
 import QRScanner from './QRScanner';
 import CustomerInterface from './CustomerInterface';
-import AdminDashboard from './AdminDashboard';
 import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
-import OnboardingPage from './OnboardingPage';
+
 import AnimatedOnboardingPage from './AnimatedOnboardingPage';
 import LandingPage from './LandingPage';
+import NotificationToast from './NotificationToast';
 
 import { orderService, tableService, userService } from '../lib/database';
 
 const RestaurantManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [restaurant] = useState<Restaurant | null>(null);
   const [showLanding, setShowLanding] = useState(true);
   const [isOnboarding, setIsOnboarding] = useState(false);
 
-  const [qrInput, setQrInput] = useState('');
+    const [qrInput, setQrInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showQrCodes, setShowQrCodes] = useState(false);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -48,12 +48,10 @@ const RestaurantManagementSystem = () => {
         setOrders(ordersData);
         setTables(tablesData);
         
-        // Convert users array to record for easy lookup
+        // Convert users array to record for easy lookup by ID
         const usersRecord: Record<string, User> = {};
         usersData.forEach(user => {
-          if (user.qr_code) {
-            usersRecord[user.qr_code] = user;
-          }
+          usersRecord[user.id] = user;
         });
         setUsers(usersRecord);
       } catch (error) {
@@ -70,14 +68,14 @@ const RestaurantManagementSystem = () => {
     setLoading(true);
     
     setTimeout(() => {
-      const codes = Object.keys(users);
-      if (codes.length === 0) {
+      const tableCodes = tables.map(t => t.qr_code).filter(Boolean);
+      if (tableCodes.length === 0) {
         setIsScanning(false);
         setLoading(false);
-        addNotification(notifications, setNotifications, 'No users available. Please complete onboarding first.', 'warning');
+        addNotification(notifications, setNotifications, 'No tables available. Please complete onboarding first.', 'warning');
         return;
       }
-      const randomCode = codes[Math.floor(Math.random() * codes.length)];
+      const randomCode = tableCodes[Math.floor(Math.random() * tableCodes.length)];
       setQrInput(randomCode);
       setIsScanning(false);
       setLoading(false);
@@ -85,19 +83,48 @@ const RestaurantManagementSystem = () => {
     }, 2000);
   };
 
-  const handleQrScan = () => {
-    const user = users[qrInput.toUpperCase()];
-    
-    if (user) {
-      setLoading(true);
-      setTimeout(() => {
-        setCurrentUser(user);
-        setQrInput('');
-        setLoading(false);
-        addNotification(notifications, setNotifications, `Welcome ${user.name}!`, 'success');
-      }, 1000);
-    } else {
-      addNotification(notifications, setNotifications, 'Invalid QR Code - Please try again', 'error');
+  const handleQrScan = async () => {
+    setLoading(true);
+    try {
+      // Find table by QR code
+      const table = tables.find(t => t.qr_code === qrInput.toUpperCase());
+      
+      if (table) {
+        // Find or create a customer user for this table
+        let customerUser = Object.values(users).find(u => u.table === table.table_number && u.role === 'customer');
+        
+        if (!customerUser) {
+          // Create a new customer user for this table
+          const newUser = await userService.createUser({
+            name: `Customer at Table ${table.table_number}`,
+            email: '',
+            phone: '',
+            role: 'customer',
+            language: 'en',
+            table: table.table_number
+          });
+          
+          if (newUser) {
+            customerUser = newUser;
+            setUsers(prev => ({ ...prev, [newUser.id]: newUser }));
+          }
+        }
+        
+        if (customerUser) {
+          setCurrentUser(customerUser);
+          setQrInput('');
+          addNotification(notifications, setNotifications, `Welcome to Table ${table.table_number}!`, 'success');
+        } else {
+          addNotification(notifications, setNotifications, 'Error creating customer account', 'error');
+        }
+      } else {
+        addNotification(notifications, setNotifications, 'Invalid QR Code - Please try again', 'error');
+      }
+    } catch (error) {
+      console.error('Error scanning QR code:', error);
+      addNotification(notifications, setNotifications, 'Error scanning QR code', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -231,11 +258,9 @@ const RestaurantManagementSystem = () => {
   if (isOnboarding) {
     return (
       <>
-        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
-          */}
         
         <AnimatedOnboardingPage />
       </>
@@ -246,10 +271,9 @@ const RestaurantManagementSystem = () => {
   if (!currentUser) {
     return (
       <>
-        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
-        ))}*/}
+        ))}
         
         <QRScanner
           onQrScan={handleQrScan}
@@ -265,11 +289,9 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'customer') {
     return (
       <>
-        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
-          */}
         
         <CustomerInterface
           currentUser={currentUser}
@@ -286,35 +308,13 @@ const RestaurantManagementSystem = () => {
     );
   }
 
-  // Admin Dashboard
-  if (currentUser.role === 'admin') {
-    return (
-      <>
-        {/* Notifications 
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-          */}
-        
-        <AdminDashboard
-          currentUser={currentUser}
-          setCurrentUser={setCurrentUser}
-          orders={orders}
-          tables={tables}
-        />
-      </>
-    );
-  }
-
   // Waiter Dashboard
   if (currentUser.role === 'waiter') {
     return (
       <>
-        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
-          */}
         
         <WaiterDashboard
           currentUser={currentUser}
@@ -331,11 +331,9 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'chef') {
     return (
       <>
-        {/* Notifications 
         {notifications.map(notification => (
           <NotificationToast key={notification.id} notification={notification} />
         ))}
-          */}
         
         <ChefDashboard
           currentUser={currentUser}

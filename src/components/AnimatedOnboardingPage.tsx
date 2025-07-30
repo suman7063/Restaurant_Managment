@@ -221,6 +221,7 @@ const AnimatedOnboardingPage: React.FC = () => {
         language: (restaurant.languages[0] || "en") as Language,
         kitchen_station: undefined,
         table: undefined,
+        restaurant_id: restaurant.id,
       };
       const admin = await userService.createUser(adminPayload);
       if (!admin) throw new Error("Failed to create admin user.");

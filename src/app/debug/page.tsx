@@ -3,10 +3,10 @@ import { useState } from 'react'
 import { testSupabaseConnection, testUsersTable, testCreateUser } from '../../lib/database'
 
 export default function DebugPage() {
-  const [results, setResults] = useState<any>({})
+  const [results, setResults] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(false)
 
-  const runTest = async (testName: string, testFunction: () => Promise<any>) => {
+  const runTest = async (testName: string, testFunction: () => Promise<unknown>) => {
     setLoading(true)
     try {
       const result = await testFunction()

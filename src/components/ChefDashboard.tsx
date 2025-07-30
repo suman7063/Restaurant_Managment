@@ -16,9 +16,9 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
   orders,
   onUpdateOrderStatus
 }) => {
-  const pendingOrdersCount = orders.filter(o => o.status === 'pending').length;
-  const preparingOrdersCount = orders.filter(o => o.status === 'preparing').length;
-  const readyOrdersCount = orders.filter(o => o.status === 'ready').length;
+  const activeOrdersCount = orders.filter(o => o.status === 'active').length;
+  const completedOrdersCount = orders.filter(o => o.status === 'completed').length;
+  const cancelledOrdersCount = orders.filter(o => o.status === 'cancelled').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100">
@@ -36,7 +36,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
           <div className="flex items-center space-x-4">
             <div className="bg-red-100 text-red-800 px-4 py-2 rounded-xl font-medium flex items-center space-x-2">
               <Clock className="w-5 h-5" />
-              <span>{pendingOrdersCount} New Orders</span>
+              <span>{activeOrdersCount} Active Orders</span>
             </div>
             <button
               onClick={() => setCurrentUser(null)}
@@ -55,8 +55,8 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending Orders</p>
-                <p className="text-3xl font-bold text-yellow-600">{pendingOrdersCount}</p>
-                <p className="text-xs text-yellow-500 mt-1">Waiting to start</p>
+                <p className="text-3xl font-bold text-yellow-600">{activeOrdersCount}</p>
+                <p className="text-xs text-yellow-500 mt-1">Active orders</p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-xl">
                 <Clock className="w-8 h-8 text-yellow-600" />
@@ -68,8 +68,8 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Preparing</p>
-                <p className="text-3xl font-bold text-blue-600">{preparingOrdersCount}</p>
-                <p className="text-xs text-blue-500 mt-1">In progress</p>
+                <p className="text-3xl font-bold text-blue-600">{completedOrdersCount}</p>
+                <p className="text-xs text-blue-500 mt-1">Completed</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-xl">
                 <ChefHat className="w-8 h-8 text-blue-600" />
@@ -81,8 +81,8 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Ready</p>
-                <p className="text-3xl font-bold text-green-600">{readyOrdersCount}</p>
-                <p className="text-xs text-green-500 mt-1">Ready for pickup</p>
+                <p className="text-3xl font-bold text-green-600">{cancelledOrdersCount}</p>
+                <p className="text-xs text-green-500 mt-1">Cancelled</p>
               </div>
               <div className="bg-green-100 p-3 rounded-xl">
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -99,7 +99,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {orders.filter(order => order.status !== 'delivered').map((order, index) => (
+            {orders.filter(order => order.status !== 'completed').map((order, index) => (
               <div 
                 key={order.id} 
                 className="border-2 border-gray-100 rounded-xl p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"

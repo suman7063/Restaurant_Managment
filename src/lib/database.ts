@@ -7,11 +7,10 @@ export interface DatabaseUser {
   name: string
   email: string
   phone: string
-  qr_code: string | null
-  table_number: number | null
   role: string
   language: string
-  kitchen_station: string | null
+  kitchen_station_id: string | null
+  restaurant_id: string | null
   created_at: string
   updated_at: string
 }
@@ -110,25 +109,10 @@ export interface DatabaseRestaurant {
 // User operations
 export const userService = {
   async getUserByQRCode(qrCode: string): Promise<User | null> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('qr_code', qrCode)
-      .single()
-
-    if (error || !data) return null
-
-    return {
-      id: data.id, // UUID - no need to parse
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      table: data.table_number,
-      role: data.role,
-      qr_code: data.qr_code,
-      language: data.language || 'en',
-      kitchen_station: data.kitchen_station
-    }
+    // QR codes are for tables, not users
+    // This function should be removed or refactored to work with restaurant_tables
+    console.warn('getUserByQRCode is deprecated - QR codes are for tables, not users');
+    return null;
   },
 
   async getAllUsers(): Promise<User[]> {
@@ -151,27 +135,24 @@ export const userService = {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      table: user.table_number,
+      table: undefined, // Users don't have table_number in database
       role: user.role,
-      qr_code: user.qr_code,
       language: user.language || 'en',
-      kitchen_station: user.kitchen_station
+      kitchen_station: user.kitchen_station_id
     }))
   },
 
-  async createUser(userData: Omit<User, 'id'>): Promise<User | null> {
+  async createUser(userData: Omit<User, 'id'> & { password?: string; restaurant_id?: string }): Promise<User | null> {
     console.log('Creating user with data:', userData);
     
     const insertData = {
-      qr_code: userData.qr_code,
       name: userData.name,
       email: userData.email || null,
       phone: userData.phone || null,
       role: userData.role,
       language: userData.language || 'en',
-      kitchen_station: userData.kitchen_station || null,
-      // Only set table_number for customers, not for staff members
-      table_number: userData.role === 'customer' && userData.table ? parseInt(userData.table.toString()) : null
+      kitchen_station_id: userData.kitchen_station || null,
+      restaurant_id: userData.restaurant_id || null
     };
     
     console.log('Insert data prepared:', insertData);
@@ -203,14 +184,13 @@ export const userService = {
 
       return {
         id: data.id,
-        qr_code: data.qr_code,
         name: data.name,
         email: data.email,
         phone: data.phone,
         role: data.role as UserRole,
         language: data.language as Language,
-        kitchen_station: data.kitchen_station,
-        table: data.table_number
+        kitchen_station: data.kitchen_station_id,
+        table: userData.table || undefined
       }
     } catch (error) {
       console.error('Exception during user creation:', error);
@@ -231,7 +211,7 @@ export const menuService = {
     if (error || !data) return []
 
     return data.map(item => ({
-      id: parseInt(item.id),
+      id: item.id,
       name: item.name,
       name_hi: item.name_hi,
       name_kn: item.name_kn,
@@ -264,7 +244,7 @@ export const menuService = {
     if (error || !data) return []
 
     return data.map(item => ({
-      id: parseInt(item.id),
+      id: item.id,
       name: item.name,
       name_hi: item.name_hi,
       name_kn: item.name_kn,
@@ -315,7 +295,7 @@ export const menuService = {
     if (error || !data) return null
 
     return {
-      id: parseInt(data.id),
+      id: data.id,
       name: data.name,
       name_hi: data.name_hi,
       name_kn: data.name_kn,
@@ -356,12 +336,12 @@ export const orderService = {
     if (error || !data) return []
 
     return data.map(order => ({
-      id: parseInt(order.id),
+      id: order.id,
       table: order.table_number,
       customer_name: order.customer_name,
       customer_phone: order.customer_phone,
       items: order.order_items.map((item: Record<string, unknown>) => ({
-        id: parseInt((item.menu_items as Record<string, unknown>).id as string),
+        id: (item.menu_items as Record<string, unknown>).id as string,
         name: (item.menu_items as Record<string, unknown>).name as string,
         price: item.price_at_time as number,
         category: (item.menu_items as Record<string, unknown>).category as string,
@@ -396,12 +376,12 @@ export const orderService = {
     if (error || !data) return []
 
     return data.map(order => ({
-      id: parseInt(order.id),
+      id: order.id,
       table: order.table_number,
       customer_name: order.customer_name,
       customer_phone: order.customer_phone,
       items: order.order_items.map((item: Record<string, unknown>) => ({
-        id: parseInt((item.menu_items as Record<string, unknown>).id as string),
+        id: (item.menu_items as Record<string, unknown>).id as string,
         name: (item.menu_items as Record<string, unknown>).name as string,
         price: item.price_at_time as number,
         category: (item.menu_items as Record<string, unknown>).category as string,
@@ -460,13 +440,13 @@ export const orderService = {
     if (itemsError) return null
 
     return {
-      id: parseInt(order.id),
+      id: order.id,
       table: order.table_number,
       customer_name: order.customer_name,
       customer_phone: orderData.customerName, // Use the input data
       items: orderData.items.map((item, index) => ({
-        id: index + 1, // Generate a temporary ID
-        order_id: parseInt(order.id),
+        id: `temp_${index + 1}`, // Generate a temporary string ID
+        order_id: order.id,
         menu_item: item,
         quantity: item.quantity,
         special_notes: item.special_notes,
@@ -487,11 +467,11 @@ export const orderService = {
     }
   },
 
-  async updateOrderStatus(orderId: number, status: string): Promise<boolean> {
+  async updateOrderStatus(orderId: string, status: string): Promise<boolean> {
     const { error } = await supabase
       .from('orders')
       .update({ status })
-      .eq('id', orderId.toString())
+      .eq('id', orderId)
 
     return !error
   }
@@ -508,7 +488,7 @@ export const tableService = {
     if (error || !data) return []
 
     return data.map(table => ({
-      id: table.table_number,
+      id: table.id,
       table_number: table.table_number,
       status: table.status as 'available' | 'occupied' | 'needs_reset',
       waiter_id: table.waiter_id,
@@ -548,7 +528,7 @@ export const notificationService = {
     if (error || !data) return []
 
     return data.map(notification => ({
-      id: parseInt(notification.id),
+      id: notification.id,
       message: notification.message,
       message_hi: notification.message_hi,
       message_kn: notification.message_kn,
@@ -579,7 +559,7 @@ export const notificationService = {
     if (error || !data) return null
 
     return {
-      id: parseInt(data.id),
+      id: data.id,
       message: data.message,
       message_hi: data.message_hi,
       message_kn: data.message_kn,
@@ -592,11 +572,11 @@ export const notificationService = {
     }
   },
 
-  async markAsRead(notificationId: number): Promise<boolean> {
+  async markAsRead(notificationId: string): Promise<boolean> {
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
-      .eq('id', notificationId.toString())
+      .eq('id', notificationId)
 
     return !error
   }
@@ -605,6 +585,8 @@ export const notificationService = {
 // Restaurant operations
 export const restaurantService = {
   async createRestaurant(restaurantData: Omit<Restaurant, 'id' | 'created_at' | 'updated_at'>): Promise<Restaurant | null> {
+    console.log('Creating restaurant with data:', restaurantData);
+    
     const { data, error } = await supabase
       .from('restaurants')
       .insert({
@@ -622,10 +604,26 @@ export const restaurantService = {
       .select()
       .single()
 
-    if (error || !data) return null
+    if (error) {
+      console.error('Supabase error creating restaurant:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return null;
+    }
+    
+    if (!data) {
+      console.error('No data returned from restaurant creation');
+      return null;
+    }
+
+    console.log('Restaurant created successfully:', data);
 
     return {
-      id: parseInt(data.id),
+      id: data.id,
       name: data.name,
       address: data.address,
       city: data.city,
@@ -641,7 +639,7 @@ export const restaurantService = {
     }
   },
 
-  async getRestaurantById(id: number): Promise<Restaurant | null> {
+  async getRestaurantById(id: string): Promise<Restaurant | null> {
     const { data, error } = await supabase
       .from('restaurants')
       .select('*')
@@ -651,7 +649,7 @@ export const restaurantService = {
     if (error || !data) return null
 
     return {
-      id: parseInt(data.id),
+      id: data.id,
       name: data.name,
       address: data.address,
       city: data.city,
@@ -728,14 +726,13 @@ export const testCreateUser = async () => {
     console.log('Testing user creation...');
     
     const testUser = {
-      qr_code: "TEST_ADMIN_" + Date.now(),
       name: "Test Admin",
       email: "test@example.com",
       phone: "1234567890",
       role: "admin",
       language: "en",
-      kitchen_station: null,
-      table_number: null
+      kitchen_station_id: null,
+      restaurant_id: null
     };
     
     console.log('Attempting to create test user with data:', testUser);
@@ -763,7 +760,7 @@ export const testCreateUser = async () => {
     await supabase
       .from('users')
       .delete()
-      .eq('qr_code', testUser.qr_code);
+      .eq('email', testUser.email);
     
     return { success: true, data };
   } catch (error) {

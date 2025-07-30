@@ -104,8 +104,8 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   getTranslation: (key: string) => string;
-  getLocalizedName: (item: any) => string;
-  getLocalizedDescription: (item: any) => string;
+  getLocalizedName: (item: Record<string, string>) => string;
+  getLocalizedDescription: (item: Record<string, string>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -147,14 +147,14 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     return langTranslations[key] || (translations.en as Record<string, string>)[key] || key;
   };
 
-  const getLocalizedName = (item: any): string => {
+  const getLocalizedName = (item: Record<string, string>): string => {
     if (!item) return '';
     
     const nameKey = `name_${language}`;
     return item[nameKey] || item.name || '';
   };
 
-  const getLocalizedDescription = (item: any): string => {
+  const getLocalizedDescription = (item: Record<string, string>): string => {
     if (!item) return '';
     
     const descKey = `description_${language}`;

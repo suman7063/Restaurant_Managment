@@ -7,7 +7,6 @@ import {
   Globe, 
   Star, 
   ArrowRight, 
-  CheckCircle, 
   Zap,
   Building2,
   Smartphone,

@@ -164,28 +164,27 @@ const OnboardingPage: React.FC = () => {
       if (createdRestaurant) {
         console.log('Restaurant created successfully, creating admin user...');
         // Create admin user
-        const adminUser: Omit<UserType, 'id'> & { password: string } = {
+        const adminUser: Omit<UserType, 'id'> & { password: string; restaurant_id: string } = {
           name: adminData.name,
           email: restaurantData.email,
           phone: restaurantData.phone,
           role: 'admin',
-          qr_code: `ADMIN_${Date.now()}`,
           language: restaurantData.languages[0] as 'en' | 'hi' | 'kn',
           kitchen_station: undefined,
           table: undefined,
-          password: adminData.password
+          password: adminData.password,
+          restaurant_id: createdRestaurant.id
         };
 
         console.log('Admin user data to create:', adminUser);
         console.log('Validating admin user data...');
         
         // Validate required fields
-        if (!adminUser.name || !adminUser.email || !adminUser.phone || !adminUser.qr_code) {
+        if (!adminUser.name || !adminUser.email || !adminUser.phone) {
           console.error('Missing required admin user fields:', {
             name: !!adminUser.name,
             email: !!adminUser.email,
-            phone: !!adminUser.phone,
-            qr_code: !!adminUser.qr_code
+            phone: !!adminUser.phone
           });
           throw new Error('Missing required admin user fields');
         }
@@ -196,7 +195,7 @@ const OnboardingPage: React.FC = () => {
         
         if (createdUser) {
           console.log('Both restaurant and user created successfully!');
-          setAdminQRCode(createdUser.qr_code);
+          setAdminQRCode(createdUser.id); // Use user ID instead of QR code
           setIsComplete(true);
           // Redirect to admin login page after a short delay to show success message
           setTimeout(() => {
@@ -474,7 +473,7 @@ const OnboardingPage: React.FC = () => {
         </p>
         
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <p className="text-sm font-medium text-gray-700 mb-2">Your Admin QR Code:</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">Your Admin User ID:</p>
           <p className="text-lg font-mono text-gray-900 bg-white p-2 rounded border">{adminQRCode}</p>
         </div>
         

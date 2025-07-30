@@ -5,7 +5,6 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  qr_code: string;
   language: Language;
   kitchen_station?: string;
   table?: number;
