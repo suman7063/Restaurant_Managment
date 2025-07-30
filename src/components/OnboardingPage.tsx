@@ -2,18 +2,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Building2, 
-  User, 
+  Building2,  
   CreditCard, 
   CheckCircle, 
-  ArrowRight, 
-  ArrowLeft,
-  Globe,
-  Users,
-  Settings
 } from 'lucide-react';
-import { Restaurant, User as UserType, SubscriptionPlan } from './types';
-import { userService, restaurantService, testSupabaseConnection, testUsersTable } from '../lib/database';
+import { User as UserType } from './types';
+import { userService, restaurantService} from '../lib/database';
 
 const OnboardingPage: React.FC = () => {
   const router = useRouter();
@@ -220,20 +214,6 @@ const OnboardingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTestConnection = async () => {
-    console.log('Testing Supabase connection...');
-    const result = await testSupabaseConnection();
-    console.log('Connection test result:', result);
-    alert(result.success ? 'Supabase connection successful!' : `Connection failed: ${result.error}`);
-  };
-
-  const handleTestUsersTable = async () => {
-    console.log('Testing users table...');
-    const result = await testUsersTable();
-    console.log('Users table test result:', result);
-    alert(result.success ? 'Users table accessible!' : `Users table error: ${result.error}`);
   };
 
   const renderStep1 = () => (
