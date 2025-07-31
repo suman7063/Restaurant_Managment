@@ -32,7 +32,7 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ id: table.id })
+        body: JSON.stringify({ id: table.id, action: 'delete' })
       });
 
       if (!response.ok) {
@@ -40,7 +40,7 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
         throw new Error(errorData.message || 'Failed to delete table');
       }
 
-      setSuccess('Table deleted successfully!');
+      setSuccess('Table archived successfully!');
       
       // Close modal after a short delay
       setTimeout(() => {
@@ -49,9 +49,9 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
         setSuccess('');
       }, 1500);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting table:', err);
-      setError(err.message || 'Failed to delete table. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to delete table. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +72,7 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Delete Table</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Archive Table</h2>
           <button
             onClick={handleClose}
             disabled={isLoading}
@@ -83,13 +83,13 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
         </div>
 
         {/* Warning Message */}
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
-          <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
+          <AlertTriangle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-red-800 mb-1">Are you sure?</h3>
-            <p className="text-red-700 text-sm">
-              You are about to delete <strong>Table {table.table_number}</strong>. 
-              This action cannot be undone and will permanently remove the table from your restaurant.
+            <h3 className="font-semibold text-orange-800 mb-1">Archive Table</h3>
+            <p className="text-orange-700 text-sm">
+              You are about to archive <strong>Table {table.table_number}</strong>. 
+              The table will be hidden but can be restored later if needed. This is a safe operation.
             </p>
           </div>
         </div>
@@ -138,17 +138,17 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
             type="button"
             onClick={handleDelete}
             disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Deleting...
+                Archiving...
               </>
             ) : (
               <>
                 <Trash2 className="w-4 h-4" />
-                Delete Table
+                Archive Table
               </>
             )}
           </button>

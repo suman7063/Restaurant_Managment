@@ -111,7 +111,7 @@ export async function updateTable(tableId: string, updateData: UpdateTableData):
   }
 }
 
-// Delete a table
+// Soft delete a table
 export async function deleteTable(tableId: string): Promise<void> {
   if (!isSupabaseConfigured) {
     console.warn('Supabase not configured, cannot delete table');
@@ -121,15 +121,128 @@ export async function deleteTable(tableId: string): Promise<void> {
   try {
     const { error } = await supabase
       .from('restaurant_tables')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', tableId);
 
     if (error) {
-      console.error('Error deleting table:', error);
+      console.error('Error soft deleting table:', error);
       throw error;
     }
   } catch (error) {
     console.error('Error in deleteTable:', error);
+    throw error;
+  }
+}
+
+// Restore a soft deleted table
+export async function restoreTable(tableId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore table');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('restaurant_tables')
+      .update({ deleted_at: null })
+      .eq('id', tableId);
+
+    if (error) {
+      console.error('Error restoring table:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreTable:', error);
+    throw error;
+  }
+}
+
+// Get soft-deleted tables (for admin view)
+export async function getSoftDeletedTables(restaurantId: string): Promise<Table[]> {
+  interface TableRow {
+    id: string;
+    table_number: number;
+    status: string;
+    waiter_id: string;
+    waiter?: { name: string };
+    guests: number;
+    revenue: number;
+    qr_code: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+  }
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot fetch soft-deleted tables');
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('restaurant_tables')
+      .select(`
+        *,
+        waiter:users!restaurant_tables_waiter_id_fkey(
+          id,
+          name,
+          email
+        )
+      `)
+      .eq('restaurant_id', restaurantId)
+      .not('deleted_at', 'is', null) // Only fetch soft-deleted tables
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching soft-deleted tables:', error);
+      return [];
+    }
+
+    return (data || []).map((table: TableRow) => ({
+      id: table.id,
+      table_number: table.table_number,
+      status: table.status as 'available' | 'occupied' | 'needs_reset',
+      waiter_id: table.waiter_id,
+      waiter_name: table.waiter?.name || undefined,
+      guests: table.guests,
+      revenue: table.revenue,
+      qr_code: table.qr_code,
+      current_orders: [],
+      created_at: new Date(table.created_at),
+      updated_at: new Date(table.updated_at),
+      deleted_at: table.deleted_at ? new Date(table.deleted_at) : undefined
+    }));
+  } catch (error) {
+    console.error('Error in getSoftDeletedTables:', error);
+    return [];
+  }
+}
+
+// Permanently delete a table (hard delete)
+export async function permanentlyDeleteTable(tableId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot permanently delete table');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    // First, update the record to bypass the trigger
+    await supabase
+      .from('restaurant_tables')
+      .update({ deleted_at: null })
+      .eq('id', tableId);
+
+    // Then perform the actual delete
+    const { error } = await supabase
+      .from('restaurant_tables')
+      .delete()
+      .eq('id', tableId);
+
+    if (error) {
+      console.error('Error permanently deleting table:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in permanentlyDeleteTable:', error);
     throw error;
   }
 }
@@ -170,6 +283,7 @@ export const menuService = {
         .from('menu_items')
         .select('*')
         .eq('available', true)
+        .is('deleted_at', null) // Only fetch non-deleted menu items
         .order('category', { ascending: true });
 
       if (error) {
@@ -220,6 +334,7 @@ export const menuService = {
         .select('*')
         .eq('popular', true)
         .eq('available', true)
+        .is('deleted_at', null) // Only fetch non-deleted menu items
         .order('rating', { ascending: false });
 
       if (error || !data) return [];
@@ -270,6 +385,7 @@ export const orderService = {
             menu_items (*)
           )
         `)
+        .is('deleted_at', null) // Only fetch non-deleted orders
         .order('created_at', { ascending: false });
 
       if (error || !data) return [];
@@ -407,6 +523,7 @@ export const tableService = {
       const { data, error } = await supabase
         .from('restaurant_tables')
         .select('*')
+        .is('deleted_at', null) // Only fetch non-deleted tables
         .order('table_number', { ascending: true });
 
       if (error || !data) return [];
@@ -443,6 +560,7 @@ export const userService = {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .is('deleted_at', null) // Only fetch non-deleted users
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -613,3 +731,468 @@ export const restaurantService = {
     }
   }
 }; 
+
+// ============================================================================
+// SOFT DELETE FUNCTIONS FOR ALL ENTITIES
+// ============================================================================
+
+// User soft delete functions
+export async function softDeleteUser(userId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete user');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error soft deleting user:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteUser:', error);
+    throw error;
+  }
+}
+
+export async function restoreUser(userId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore user');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ deleted_at: null })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error restoring user:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreUser:', error);
+    throw error;
+  }
+}
+
+// Restaurant soft delete functions
+export async function softDeleteRestaurant(restaurantId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete restaurant');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('restaurants')
+      .delete()
+      .eq('id', restaurantId);
+
+    if (error) {
+      console.error('Error soft deleting restaurant:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteRestaurant:', error);
+    throw error;
+  }
+}
+
+export async function restoreRestaurant(restaurantId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore restaurant');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('restaurants')
+      .update({ deleted_at: null })
+      .eq('id', restaurantId);
+
+    if (error) {
+      console.error('Error restoring restaurant:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreRestaurant:', error);
+    throw error;
+  }
+}
+
+// Kitchen station soft delete functions
+export async function softDeleteKitchenStation(stationId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete kitchen station');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('kitchen_stations')
+      .delete()
+      .eq('id', stationId);
+
+    if (error) {
+      console.error('Error soft deleting kitchen station:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteKitchenStation:', error);
+    throw error;
+  }
+}
+
+export async function restoreKitchenStation(stationId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore kitchen station');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('kitchen_stations')
+      .update({ deleted_at: null })
+      .eq('id', stationId);
+
+    if (error) {
+      console.error('Error restoring kitchen station:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreKitchenStation:', error);
+    throw error;
+  }
+}
+
+// Menu item soft delete functions
+export async function softDeleteMenuItem(itemId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete menu item');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error soft deleting menu item:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteMenuItem:', error);
+    throw error;
+  }
+}
+
+export async function restoreMenuItem(itemId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore menu item');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ deleted_at: null })
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error restoring menu item:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreMenuItem:', error);
+    throw error;
+  }
+}
+
+// Order soft delete functions
+export async function softDeleteOrder(orderId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete order');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Error soft deleting order:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteOrder:', error);
+    throw error;
+  }
+}
+
+export async function restoreOrder(orderId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore order');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ deleted_at: null })
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Error restoring order:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreOrder:', error);
+    throw error;
+  }
+}
+
+// Order item soft delete functions
+export async function softDeleteOrderItem(itemId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete order item');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error soft deleting order item:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteOrderItem:', error);
+    throw error;
+  }
+}
+
+export async function restoreOrderItem(itemId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore order item');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('order_items')
+      .update({ deleted_at: null })
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error restoring order item:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreOrderItem:', error);
+    throw error;
+  }
+}
+
+// Notification soft delete functions
+export async function softDeleteNotification(notificationId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete notification');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('Error soft deleting notification:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteNotification:', error);
+    throw error;
+  }
+}
+
+export async function restoreNotification(notificationId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore notification');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ deleted_at: null })
+      .eq('id', notificationId);
+
+    if (error) {
+      console.error('Error restoring notification:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreNotification:', error);
+    throw error;
+  }
+}
+
+// Auth session soft delete functions
+export async function softDeleteAuthSession(sessionId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete auth session');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('auth_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error soft deleting auth session:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeleteAuthSession:', error);
+    throw error;
+  }
+}
+
+export async function restoreAuthSession(sessionId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore auth session');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('auth_sessions')
+      .update({ deleted_at: null })
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error restoring auth session:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restoreAuthSession:', error);
+    throw error;
+  }
+}
+
+// Password reset token soft delete functions
+export async function softDeletePasswordResetToken(tokenId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete password reset token');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('password_reset_tokens')
+      .delete()
+      .eq('id', tokenId);
+
+    if (error) {
+      console.error('Error soft deleting password reset token:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in softDeletePasswordResetToken:', error);
+    throw error;
+  }
+}
+
+export async function restorePasswordResetToken(tokenId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore password reset token');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    const { error } = await supabase
+      .from('password_reset_tokens')
+      .update({ deleted_at: null })
+      .eq('id', tokenId);
+
+    if (error) {
+      console.error('Error restoring password reset token:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in restorePasswordResetToken:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// BULK SOFT DELETE FUNCTIONS
+// ============================================================================
+
+// Bulk soft delete all records for a restaurant (for restaurant deletion)
+export async function softDeleteRestaurantData(restaurantId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot soft delete restaurant data');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    // Soft delete all related data
+    await Promise.all([
+      supabase.from('restaurant_tables').delete().eq('restaurant_id', restaurantId),
+      supabase.from('menu_items').delete().eq('restaurant_id', restaurantId),
+      supabase.from('kitchen_stations').delete().eq('restaurant_id', restaurantId),
+      supabase.from('orders').delete().eq('restaurant_id', restaurantId),
+      supabase.from('notifications').delete().eq('restaurant_id', restaurantId),
+      supabase.from('auth_sessions').delete().eq('restaurant_id', restaurantId),
+      supabase.from('password_reset_tokens').delete().eq('restaurant_id', restaurantId),
+      supabase.from('users').delete().eq('restaurant_id', restaurantId),
+      supabase.from('restaurants').delete().eq('id', restaurantId)
+    ]);
+  } catch (error) {
+    console.error('Error in softDeleteRestaurantData:', error);
+    throw error;
+  }
+}
+
+// Bulk restore all records for a restaurant
+export async function restoreRestaurantData(restaurantId: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    console.warn('Supabase not configured, cannot restore restaurant data');
+    throw new Error('Supabase not configured');
+  }
+
+  try {
+    // Restore all related data
+    await Promise.all([
+      supabase.from('restaurant_tables').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('menu_items').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('kitchen_stations').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('orders').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('notifications').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('auth_sessions').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('password_reset_tokens').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('users').update({ deleted_at: null }).eq('restaurant_id', restaurantId),
+      supabase.from('restaurants').update({ deleted_at: null }).eq('id', restaurantId)
+    ]);
+  } catch (error) {
+    console.error('Error in restoreRestaurantData:', error);
+    throw error;
+  }
+}

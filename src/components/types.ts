@@ -102,6 +102,7 @@ export interface Table {
   current_orders: Order[];
   created_at: Date;
   updated_at: Date;
+  deleted_at?: Date; // Soft delete timestamp
 }
 
 export interface KitchenStation {

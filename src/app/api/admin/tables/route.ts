@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const restaurantId = searchParams.get('restaurantId');
+    const includeDeleted = searchParams.get('includeDeleted') === 'true';
 
     if (!restaurantId) {
       return NextResponse.json({ message: 'Restaurant ID is required' }, { status: 400 });
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch tables using service role key for admin operations
-    const { data, error } = await supabase
+    let query = supabase
       .from('restaurant_tables')
       .select(`
         *,
@@ -39,8 +40,13 @@ export async function GET(request: NextRequest) {
           email
         )
       `)
-      .eq('restaurant_id', restaurantId)
-      .order('table_number', { ascending: true });
+      .eq('restaurant_id', restaurantId);
+
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null); // Only fetch non-deleted tables
+    }
+
+    const { data, error } = await query.order('table_number', { ascending: true });
 
     if (error) {
       console.error('Error fetching tables:', error);
@@ -61,7 +67,8 @@ export async function GET(request: NextRequest) {
         qr_code: table.qr_code,
         current_orders: [], // This will be populated separately if needed
         created_at: new Date(table.created_at),
-        updated_at: new Date(table.updated_at)
+        updated_at: new Date(table.updated_at),
+        deleted_at: table.deleted_at ? new Date(table.deleted_at) : null
       };
     });
 
@@ -217,7 +224,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE - Delete a table
+// DELETE - Soft delete a table
 export async function DELETE(request: NextRequest) {
   try {
     const sessionToken = request.cookies.get('auth_session')?.value;
@@ -232,10 +239,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ message: 'Insufficient permissions' }, { status: 403 });
     }
     const body = await request.json();
-    const { id } = body;
+    const { id, action = 'delete' } = body; // Default to 'delete' if action not provided
     if (!id) {
       return NextResponse.json({ message: 'Missing table id' }, { status: 400 });
     }
+    
     // Fetch table to verify restaurant
     const { data: table, error: fetchError } = await supabase
       .from('restaurant_tables')
@@ -248,15 +256,50 @@ export async function DELETE(request: NextRequest) {
     if (table.restaurant_id !== result.user.restaurant_id) {
       return NextResponse.json({ message: 'Access denied' }, { status: 403 });
     }
-    // Delete table
-    const { error } = await supabase
-      .from('restaurant_tables')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      return NextResponse.json({ message: 'Failed to delete table' }, { status: 500 });
+
+    let error;
+    
+    if (action === 'restore') {
+      // Restore table
+      const { error: restoreError } = await supabase
+        .from('restaurant_tables')
+        .update({ deleted_at: null })
+        .eq('id', id);
+      error = restoreError;
+    } else {
+      // Soft delete table
+      console.log('Attempting to soft delete table with ID:', id);
+      console.log('User context:', { 
+        userId: result.user.id, 
+        role: result.user.role, 
+        restaurantId: result.user.restaurant_id 
+      });
+      
+      const { data, error: deleteError } = await supabase
+        .from('restaurant_tables')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+        .select();
+        
+      console.log('Soft delete result:', { data, error: deleteError });
+      
+      if (deleteError) {
+        console.error('Detailed error:', JSON.stringify(deleteError, null, 2));
+      }
+      
+      error = deleteError;
     }
-    return NextResponse.json({ success: true });
+    
+    if (error) {
+      return NextResponse.json({ 
+        message: action === 'restore' ? 'Failed to restore table' : 'Failed to delete table' 
+      }, { status: 500 });
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: action === 'restore' ? 'Table restored successfully' : 'Table deleted successfully' 
+    });
   } catch (error: any) {
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
   }
