@@ -16,6 +16,7 @@ import {
 import { Restaurant, User as UserType } from './types';
 import { userService, restaurantService } from '../lib/database';
 import { authService } from '../lib/auth';
+import { Input, Select } from './ui';
 
 const AnimatedOnboardingPage: React.FC = () => {
   const router = useRouter();
@@ -324,102 +325,74 @@ const AnimatedOnboardingPage: React.FC = () => {
                   className="space-y-6"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative">
-                                             <label className="block text-sm font-semibold text-gray-800 mb-3">
-                         Restaurant Name *
-                       </label>
-                                             <input
-                         type="text"
-                         value={restaurantData.name}
-                         onChange={(e) => handleRestaurantChange('name', e.target.value)}
-                         placeholder="Enter restaurant name"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                    </div>
+                                        <Input
+                      type="text"
+                      label="Restaurant Name *"
+                      value={restaurantData.name}
+                      onChange={(e) => handleRestaurantChange('name', e.target.value)}
+                      placeholder="Enter restaurant name"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                     
-                    <div className="relative">
-                                             <label className="block text-sm font-semibold text-gray-800 mb-3">
-                         Cuisine Type
-                       </label>
-                                             <select
-                         value={restaurantData.cuisine_type}
-                         onChange={(e) => handleRestaurantChange('cuisine_type', e.target.value)}
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       >
-                        {cuisineTypes.map((cuisine) => (
-                          <option key={cuisine} value={cuisine}>{cuisine}</option>
-                        ))}
-                      </select>
-                    </div>
+                                        <Select
+                      label="Cuisine Type"
+                      value={restaurantData.cuisine_type}
+                      onChange={(e) => handleRestaurantChange('cuisine_type', e.target.value)}
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    >
+                      {cuisineTypes.map((cuisine) => (
+                        <option key={cuisine} value={cuisine}>{cuisine}</option>
+                      ))}
+                    </Select>
                   </div>
 
-                  <div className="relative">
-                                         <label className="block text-sm font-semibold text-gray-800 mb-3">
-                       Address *
-                     </label>
-                                         <input
-                       type="text"
-                       value={restaurantData.address}
-                       onChange={(e) => handleRestaurantChange('address', e.target.value)}
-                       placeholder="Enter full address"
-                       className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                     />
+                                    <Input
+                    type="text"
+                    label="Address *"
+                    value={restaurantData.address}
+                    onChange={(e) => handleRestaurantChange('address', e.target.value)}
+                    placeholder="Enter full address"
+                    className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      type="text"
+                      label="City"
+                      value={restaurantData.city}
+                      onChange={(e) => handleRestaurantChange('city', e.target.value)}
+                      placeholder="Enter city"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
+                    
+                    <Input
+                      type="text"
+                      label="State"
+                      value={restaurantData.state}
+                      onChange={(e) => handleRestaurantChange('state', e.target.value)}
+                      placeholder="Enter state"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative">
-                      <label className="block text-sm font-semibold text-gray-800 mb-3">
-                        City
-                      </label>
-                                             <input
-                         type="text"
-                         value={restaurantData.city}
-                         onChange={(e) => handleRestaurantChange('city', e.target.value)}
-                         placeholder="Enter city"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                    </div>
+                    <Input
+                      type="tel"
+                      label="Phone Number *"
+                      value={restaurantData.phone}
+                      onChange={(e) => handleRestaurantChange('phone', e.target.value)}
+                      placeholder="Enter phone number"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                     
-                    <div className="relative">
-                      <label className="block text-sm font-semibold text-gray-800 mb-3">
-                        State
-                      </label>
-                                             <input
-                         type="text"
-                         value={restaurantData.state}
-                         onChange={(e) => handleRestaurantChange('state', e.target.value)}
-                         placeholder="Enter state"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="relative">
-                      <label className="block text-sm font-semibold text-gray-800 mb-3">
-                        Phone Number *
-                      </label>
-                                             <input
-                         type="tel"
-                         value={restaurantData.phone}
-                         onChange={(e) => handleRestaurantChange('phone', e.target.value)}
-                         placeholder="Enter phone number"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                    </div>
-                    
-                    <div className="relative">
-                      <label className="block text-sm font-semibold text-gray-800 mb-3">
-                        Email Address *
-                      </label>
-                                             <input
-                         type="email"
-                         value={restaurantData.email}
-                         onChange={(e) => handleRestaurantChange('email', e.target.value)}
-                         placeholder="Enter email address"
-                         className="w-full px-4 py-4 border-2 text-black border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                    </div>
+                    <Input
+                      type="email"
+                      label="Email Address *"
+                      value={restaurantData.email}
+                      onChange={(e) => handleRestaurantChange('email', e.target.value)}
+                      placeholder="Enter email address"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                   </div>
 
                   <div className="space-y-4">
@@ -507,45 +480,33 @@ const AnimatedOnboardingPage: React.FC = () => {
                      </p>
                    </div>
 
-                   <div className="relative">
-                     <label className="block text-sm font-semibold text-gray-800 mb-3">
-                       Admin Full Name *
-                     </label>
-                     <input
-                       type="text"
-                       value={adminData.name}
-                       onChange={(e) => handleAdminChange('name', e.target.value)}
-                       placeholder="Enter admin's full name"
-                       className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                     />
-                   </div>
+                                     <Input
+                    type="text"
+                    label="Admin Full Name *"
+                    value={adminData.name}
+                    onChange={(e) => handleAdminChange('name', e.target.value)}
+                    placeholder="Enter admin's full name"
+                    className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                  />
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div className="relative">
-                       <label className="block text-sm font-semibold text-gray-800 mb-3">
-                         Admin Password *
-                       </label>
-                       <input
-                         type="password"
-                         value={adminData.password}
-                         onChange={(e) => handleAdminChange('password', e.target.value)}
-                         placeholder="Create admin password"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                     </div>
+                                         <Input
+                      type="password"
+                      label="Admin Password *"
+                      value={adminData.password}
+                      onChange={(e) => handleAdminChange('password', e.target.value)}
+                      placeholder="Create admin password"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                      
-                     <div className="relative">
-                       <label className="block text-sm font-semibold text-gray-800 mb-3">
-                         Confirm Password *
-                       </label>
-                       <input
-                         type="password"
-                         value={adminData.confirmPassword}
-                         onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
-                         placeholder="Confirm admin password"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
-                       />
-                     </div>
+                                         <Input
+                      type="password"
+                      label="Confirm Password *"
+                      value={adminData.confirmPassword}
+                      onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm admin password"
+                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                    />
                    </div>
 
                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">

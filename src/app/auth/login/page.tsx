@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { generateCSRFToken } from '../../../lib/authMiddleware'
+import { Input } from '../../../components/ui'
 
 // Client-side version of getDashboardUrl
 function getDashboardUrl(role: string): string {
@@ -117,43 +118,29 @@ function LoginContent() {
             )}
 
             <form className="space-y-6" onSubmit={handleLogin}>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email Address
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border text-black border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your email"
-                  />
-                </div>
-              </div>
+              <Input
+                type="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border text-black border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your password"
-                  />
-                </div>
-              </div>
+              <Input
+                type="password"
+                label="Password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center">

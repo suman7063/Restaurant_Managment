@@ -10,6 +10,7 @@ import {
   sortItems
 } from './utils';
 import { menuService } from '../lib/database';
+import { Input, Select } from './ui';
 import { 
   ShoppingCart, 
   X, 
@@ -400,12 +401,12 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                    <input
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" size={20} />
+                    <Input
                       type="text"
                       placeholder={getTranslation('searchMenu')}
                       onChange={(e) => debouncedSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="pl-10 pr-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>

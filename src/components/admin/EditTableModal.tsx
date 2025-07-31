@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, CheckCircle,  RefreshCw } from 'lucide-react';
 import { Table } from '../types';
+import { Input, Select } from '../ui';
 
 interface EditTableModalProps {
   isOpen: boolean;
@@ -172,87 +173,57 @@ const EditTableModal: React.FC<EditTableModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Table Number */}
-          <div>
-            <label htmlFor="tableNumber" className="block text-sm font-medium text-gray-700 mb-2">
-              Table Number
-            </label>
-            <input
-              type="number"
-              id="tableNumber"
-              value={formData.table_number}
-              onChange={(e) => setFormData(prev => ({ ...prev, table_number: e.target.value }))}
-              className="w-full px-4 py-3 border text-gray-800 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              disabled={isLoading}
-              min="1"
-            />
-          </div>
+          <Input  
+            type="number"
+            label="Table Number"
+            value={formData.table_number}
+            onChange={(e) => setFormData(prev => ({ ...prev, table_number: e.target.value }))}
+            disabled={isLoading}
+            min="1"
+          />
 
           {/* Status */}
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              id="status"
-              value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-              className="w-full px-4 py-3 border text-gray-800 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              disabled={isLoading}
-            >
-              <option value="available">Available</option>
-              <option value="occupied">Occupied</option>
-              <option value="needs_reset">Needs Reset</option>
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={formData.status}
+            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+            disabled={isLoading}
+          >
+            <option value="available">Available</option>
+            <option value="occupied">Occupied</option>
+            <option value="needs_reset">Needs Reset</option>
+          </Select>
 
           {/* Waiter Assignment */}
-          <div>
-            <label htmlFor="waiter" className="block text-sm font-medium text-gray-700 mb-2">
-              Assigned Waiter
-            </label>
-            <input
-              type="text"
-              id="waiter"
-              value={formData.waiter_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, waiter_id: e.target.value }))}
-              placeholder="Enter waiter ID or leave empty"
-              className="w-full px-4 py-3 border text-gray-800 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              disabled={isLoading}
-            />
-          </div>
+          <Input
+            type="text"
+            label="Assigned Waiter"
+            value={formData.waiter_id}
+            onChange={(e) => setFormData(prev => ({ ...prev, waiter_id: e.target.value }))}
+            placeholder="Enter waiter ID or leave empty"
+            disabled={isLoading}
+          />
 
           {/* Guests */}
-          <div>
-            <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-2">
-              Number of Guests
-            </label>
-            <input
-              type="number"
-              id="guests"
-              value={formData.guests}
-              onChange={(e) => setFormData(prev => ({ ...prev, guests: parseInt(e.target.value) || 0 }))}
-              className="w-full px-4 py-3 border text-gray-800 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              disabled={isLoading}
-              min="0"
-            />
-          </div>
+          <Input
+            type="number"
+            label="Number of Guests"
+            value={formData.guests}
+            onChange={(e) => setFormData(prev => ({ ...prev, guests: parseInt(e.target.value) || 0 }))}
+            disabled={isLoading}
+            min="0"
+          />
 
           {/* Revenue */}
-          <div>
-            <label htmlFor="revenue" className="block text-sm font-medium text-gray-700 mb-2">
-              Revenue (₹)
-            </label>
-            <input
-              type="number"
-              id="revenue"
-              value={formData.revenue}
-              onChange={(e) => setFormData(prev => ({ ...prev, revenue: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-4 py-3 border text-gray-800 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-              disabled={isLoading}
-              min="0"
-              step="0.01"
-            />
-          </div>
+          <Input
+            type="number"
+            label="Revenue (₹)"
+            value={formData.revenue}
+            onChange={(e) => setFormData(prev => ({ ...prev, revenue: parseFloat(e.target.value) || 0 }))}
+            disabled={isLoading}
+            min="0"
+            step="0.01"
+          />
 
           {/* Error Message */}
           {error && (

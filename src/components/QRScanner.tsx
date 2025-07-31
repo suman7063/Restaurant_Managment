@@ -83,12 +83,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onQrScan, currentUser, restaurant
         
         <div className="space-y-4">
           <div className="relative">
-            <input
+            <Input
               type="text"
               placeholder="Enter QR Code (e.g., QR001, ADMIN001)"
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
-              className="w-full px-4 py-4 border-2  border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 text-center font-mono text-lg text-black"
+              className="px-4 py-4 border-2 border-gray-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 text-center font-mono text-lg"
               disabled={loading}
             />
             {qrInput && (

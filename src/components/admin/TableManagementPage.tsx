@@ -6,6 +6,7 @@ import { fetchTables } from '../../lib/database';
 import AddTableModal from './AddTableModal';
 import EditTableModal from './EditTableModal';
 import DeleteTableModal from './DeleteTableModal';
+import { Input } from '../ui';
 
 interface TableManagementPageProps {
   restaurantId: string;
@@ -138,13 +139,13 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
+            <Input
               type="text"
               placeholder="Search tables by number or waiter..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+              className="pl-10 pr-4 py-3"
             />
           </div>
           <div className="flex gap-2">

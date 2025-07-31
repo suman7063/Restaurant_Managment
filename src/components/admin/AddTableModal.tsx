@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 import { createTable, generateQRCode } from '../../lib/database';
+import { Input } from '../ui';
 
 interface AddTableModalProps {
   isOpen: boolean;
@@ -99,21 +100,15 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Table Number Input */}
-          <div>
-            <label htmlFor="tableNumber" className="block text-sm font-medium text-gray-700 mb-2">
-              Table Number
-            </label>
-            <input
-              type="number"
-              id="tableNumber"
-              value={tableNumber}
-              onChange={(e) => setTableNumber(e.target.value)}
-              placeholder="Enter table number"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-800"
-              disabled={isLoading}
-              min="1"
-            />
-          </div>
+          <Input
+            type="number"
+            label="Table Number"
+            value={tableNumber}
+            onChange={(e) => setTableNumber(e.target.value)}
+            placeholder="Enter table number"
+            disabled={isLoading}
+            min="1"
+          />
 
           {/* Error Message */}
           {error && (

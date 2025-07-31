@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Input } from '../../../components/ui'
 
 function ResetPasswordContent() {
   const [password, setPassword] = useState('')
@@ -145,43 +146,29 @@ function ResetPasswordContent() {
             )}
 
             <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  New Password
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your new password"
-                  />
-                </div>
-              </div>
+              <Input
+                type="password"
+                label="New Password"
+                name="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your new password"
+                className="px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm New Password
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Confirm your new password"
-                  />
-                </div>
-              </div>
+              <Input
+                type="password"
+                label="Confirm New Password"
+                name="confirmPassword"
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your new password"
+                className="px-3 py-2 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
 
               <div>
                 <button
