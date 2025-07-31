@@ -1,43 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
-import { Input, Modal } from '../ui';
+import { Input, Select, Modal } from '../ui';
 
-interface Waiter {
+interface Chef {
   id: string;
   name: string;
   email: string;
   phone?: string;
   is_active: boolean;
+  kitchen_station?: {
+    id: string;
+    name: string;
+    cuisine_types: string[];
+  };
 }
 
-interface EditWaiterModalProps {
+interface KitchenStation {
+  id: string;
+  name: string;
+  description?: string;
+  cuisine_types: string[];
+  is_active: boolean;
+}
+
+interface EditChefModalProps {
   isOpen: boolean;
-  waiter: Waiter;
+  chef: Chef;
+  restaurantId: string;
   onClose: () => void;
-  onUpdate: (waiterData: {
+  onUpdate: (chefData: {
     id: string;
     name?: string;
     email?: string;
     phone?: string;
     is_active?: boolean;
+    kitchen_station_id?: string;
     password?: string;
   }) => Promise<void>;
 }
 
-const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClose, onUpdate }) => {
+const EditChefModal: React.FC<EditChefModalProps> = ({ isOpen, chef, restaurantId, onClose, onUpdate }) => {
   const [formData, setFormData] = useState({
-    name: waiter.name,
-    email: waiter.email,
-    phone: waiter.phone || '',
-    is_active: waiter.is_active,
+    name: chef.name,
+    email: chef.email,
+    phone: chef.phone || '',
+    is_active: chef.is_active,
+    kitchen_station_id: chef.kitchen_station?.id || '',
     password: '',
     confirmPassword: ''
   });
+  const [kitchenStations, setKitchenStations] = useState<KitchenStation[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changePassword, setChangePassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingStations, setLoadingStations] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch kitchen stations
+  useEffect(() => {
+    const fetchKitchenStations = async () => {
+      try {
+        setLoadingStations(true);
+        const response = await fetch(`/api/admin/kitchen-stations?restaurantId=${restaurantId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setKitchenStations(data.kitchenStations || []);
+        }
+      } catch (error) {
+        console.error('Error fetching kitchen stations:', error);
+      } finally {
+        setLoadingStations(false);
+      }
+    };
+
+    fetchKitchenStations();
+  }, [restaurantId]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -80,11 +118,12 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
     setLoading(true);
     try {
       const updateData: any = {
-        id: waiter.id,
+        id: chef.id,
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        kitchen_station_id: formData.kitchen_station_id || null
       };
 
       if (changePassword && formData.password) {
@@ -112,7 +151,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Waiter"
+      title="Edit Chef"
       disabled={loading}
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -122,7 +161,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
             label="Full Name *"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Enter waiter's full name"
+            placeholder="Enter chef's full name"
             disabled={loading}
             error={errors.name}
           />
@@ -148,6 +187,26 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
             disabled={loading}
           />
 
+          {/* Kitchen Station Field */}
+          <div>
+            <Select
+              label="Kitchen Station (Optional)"
+              value={formData.kitchen_station_id}
+              onChange={(e) => handleInputChange('kitchen_station_id', e.target.value)}
+              disabled={loading || loadingStations}
+            >
+              <option value="">Select kitchen station</option>
+              {kitchenStations.map((station) => (
+                <option key={station.id} value={station.id}>
+                  {station.name} - {station.cuisine_types.join(', ')}
+                </option>
+              ))}
+            </Select>
+            {loadingStations && (
+              <p className="mt-1 text-sm text-gray-500">Loading kitchen stations...</p>
+            )}
+          </div>
+
           {/* Status Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -163,7 +222,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
                   className="mr-2"
                   disabled={loading}
                 />
-                <span className="text-sm text-purple-600">Active</span>
+                <span className="text-sm text-green-700">Active</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -220,7 +279,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
                       id="password"
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                         errors.password ? 'border-red-300' : 'border-gray-300'
                       }`}
                       placeholder="Enter new password"
@@ -256,7 +315,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
                       id="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                         errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
                       }`}
                       placeholder="Confirm new password"
@@ -295,12 +354,12 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
               type="submit"
               className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
                 loading
-                  ? 'bg-purple-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-400 to-purple-600'
+                  ? 'bg-orange-400 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-700'
               }`}
               disabled={loading}
             >
-              {loading ? 'Updating...' : 'Update Waiter'}
+              {loading ? 'Updating...' : 'Update Chef'}
             </button>
           </div>
         </form>
@@ -308,4 +367,4 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
   );
 };
 
-export default EditWaiterModal;
+export default EditChefModal;

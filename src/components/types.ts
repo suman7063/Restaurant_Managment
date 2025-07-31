@@ -6,6 +6,18 @@ export interface User {
   phone: string;
   role: UserRole;
   language: Language;
+  restaurant_id?: string; // UUID
+  kitchen_station_id?: string; // UUID
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  // Auth-related properties
+  password_hash?: string;
+  last_login?: string;
+  login_attempts?: number;
+  locked_until?: string | null;
+  // Legacy properties for backwards compatibility
   kitchen_station?: string;
   table?: number;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, AlertCircle, CheckCircle } from 'lucide-react';
 import { createTable, generateQRCode } from '../../lib/database';
-import { Input } from '../ui';
+import { Input, Modal } from '../ui';
 
 interface AddTableModalProps {
   isOpen: boolean;
@@ -83,20 +83,14 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Table</h2>
-          <button
-            onClick={handleClose}
-            disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Add New Table"
+      disabled={isLoading}
+      maxWidth="md"
+    >
+      <div className="p-6">
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Table Number Input */}
@@ -156,7 +150,7 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, CheckCircle,  RefreshCw } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { Table } from '../types';
-import { Input, Select } from '../ui';
+import { Input, Select, Modal } from '../ui';
 
 interface EditTableModalProps {
   isOpen: boolean;
@@ -156,20 +156,14 @@ const EditTableModal: React.FC<EditTableModalProps> = ({
   if (!isOpen || !table) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Edit Table {table.table_number}</h2>
-          <button
-            onClick={handleClose}
-            disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={`Edit Table ${table.table_number}`}
+      disabled={isLoading}
+      maxWidth="md"
+    >
+      <div className="p-6">
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Table Number */}
@@ -280,7 +274,7 @@ const EditTableModal: React.FC<EditTableModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
 

@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, User, Mail, Phone, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit, Trash2, User, Mail, Phone } from 'lucide-react';
 import AddWaiterModal from './AddWaiterModal';
 import EditWaiterModal from './EditWaiterModal';
 import DeleteWaiterModal from './DeleteWaiterModal';
 import SimpleToast from './SimpleToast';
 
+
+interface AssignedTable {
+  id: string;
+  table_number: number;
+  status: 'available' | 'occupied' | 'needs_reset';
+}
 
 interface Waiter {
   id: string;
@@ -13,10 +19,19 @@ interface Waiter {
   phone?: string;
   is_active: boolean;
   tableCount: number;
-  assignedTables: any[];
+  assignedTables: AssignedTable[];
   created_at: string;
   updated_at: string;
   status: 'active' | 'inactive';
+}
+
+interface WaiterFormData {
+  name?: string;
+  email?: string;
+  phone?: string;
+  is_active?: boolean;
+  id?: string;
+  password?: string;
 }
 
 interface WaiterManagementPageProps {
@@ -25,7 +40,7 @@ interface WaiterManagementPageProps {
 
 const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantId }) => {
   const [waiters, setWaiters] = useState<Waiter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -35,35 +50,49 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
     type: 'success' | 'error' | 'warning' | 'info';
   } | null>(null);
 
-  const fetchWaiters = async () => {
+  const fetchWaiters = useCallback(async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/admin/waiters?restaurantId=${restaurantId}`);
+      setIsLoading(true);
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch waiters: ${response.statusText}`);
+      if (!restaurantId || restaurantId.trim() === '') {
+        setWaiters([]);
+        setIsLoading(false);
+        return;
       }
 
-      const data = await response.json();
-      setWaiters(data.waiters || []);
-    } catch (error) {
+      const response = await fetch(`/api/admin/waiters?restaurantId=${restaurantId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setWaiters(data.waiters || []);
+      } else {
+        setWaiters([]);
+        setNotification({
+          message: 'Failed to load waiters. Please try again.',
+          type: 'error'
+        });
+      }
+    } catch (error: unknown) {
       console.error('Error fetching waiters:', error);
+      setWaiters([]);
       setNotification({
-        message: 'Failed to load waiters. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to load waiters. Please try again.',
         type: 'error'
       });
     } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (restaurantId) {
-      fetchWaiters();
+      setIsLoading(false);
     }
   }, [restaurantId]);
 
-  const handleAddWaiter = async (waiterData: any) => {
+  useEffect(() => {
+    if (restaurantId && restaurantId.trim() !== '') {
+      fetchWaiters();
+    } else {
+      setIsLoading(false);
+    }
+  }, [restaurantId, fetchWaiters]);
+
+  const handleAddWaiter = async (waiterData: WaiterFormData) => {
     try {
       const response = await fetch('/api/admin/waiters', {
         method: 'POST',
@@ -88,16 +117,16 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
         message: 'Waiter added successfully!',
         type: 'success'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding waiter:', error);
       setNotification({
-        message: error.message || 'Failed to add waiter. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to add waiter. Please try again.',
         type: 'error'
       });
     }
   };
 
-  const handleEditWaiter = async (waiterData: any) => {
+  const handleEditWaiter = async (waiterData: WaiterFormData) => {
     try {
       const response = await fetch('/api/admin/waiters', {
         method: 'PATCH',
@@ -126,10 +155,10 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
         message: 'Waiter updated successfully!',
         type: 'success'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating waiter:', error);
       setNotification({
-        message: error.message || 'Failed to update waiter. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to update waiter. Please try again.',
         type: 'error'
       });
     }
@@ -153,39 +182,23 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
         message: 'Waiter removed successfully!',
         type: 'success'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting waiter:', error);
       setNotification({
-        message: error.message || 'Failed to delete waiter. Please try again.',
+        message: error instanceof Error ? error.message : 'Failed to delete waiter. Please try again.',
         type: 'error'
       });
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-bold text-gray-900">Waiter Management</h2>
         </div>
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <div className="animate-pulse space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-300 rounded w-32"></div>
-                    <div className="h-3 bg-gray-300 rounded w-24"></div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="h-6 bg-gray-300 rounded w-16"></div>
-                  <div className="h-8 bg-gray-300 rounded w-12"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"/>
         </div>
       </div>
     );
@@ -200,9 +213,9 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all flex items-center space-x-2"
+          className="bg-gradient-to-r from-purple-400 to-purple-600  text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
         >
-          <Plus size={18} />
+          <Plus className="w-5 h-5" />
           <span>Add New Waiter</span>
         </button>
       </div>
@@ -215,9 +228,10 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
             <p className="text-gray-600 mb-4">Add your first waiter to start managing staff</p>
             <button 
               onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+              className="mt-4 bg-gradient-to-r from-purple-400 to-purple-600 shadow-lg text-white px-6 py-3 rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center gap-2 mx-auto"
             >
-              Add First Waiter
+              <Plus className="w-5 h-5" />
+              Add Your First Waiter
             </button>
           </div>
         ) : (
@@ -225,7 +239,7 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
             {waiters.map((waiter) => (
               <div key={waiter.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                     {waiter.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -248,7 +262,7 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
                 <div className="flex items-center space-x-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     waiter.status === 'active' 
-                      ? 'bg-green-100 text-green-700' 
+                      ? 'bg-purple-100 text-purple-600' 
                       : 'bg-red-100 text-red-700'
                   }`}>
                     {waiter.status}
@@ -259,7 +273,7 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
                         setSelectedWaiter(waiter);
                         setShowEditModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="text-purple-600 hover:text-purple-600 p-2 rounded-lg hover:bg-blue-50 transition-colors"
                       title="Edit waiter"
                     >
                       <Edit size={16} />
@@ -283,15 +297,15 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
       </div>
 
       {/* Modals */}
-      {showAddModal && (
-        <AddWaiterModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddWaiter}
-        />
-      )}
+      <AddWaiterModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddWaiter}
+      />
 
-      {showEditModal && selectedWaiter && (
+      {selectedWaiter && (
         <EditWaiterModal
+          isOpen={showEditModal}
           waiter={selectedWaiter}
           onClose={() => {
             setShowEditModal(false);
@@ -301,8 +315,9 @@ const WaiterManagementPage: React.FC<WaiterManagementPageProps> = ({ restaurantI
         />
       )}
 
-      {showDeleteModal && selectedWaiter && (
+      {selectedWaiter && (
         <DeleteWaiterModal
+          isOpen={showDeleteModal}
           waiter={selectedWaiter}
           onClose={() => {
             setShowDeleteModal(false);

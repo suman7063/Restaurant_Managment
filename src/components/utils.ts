@@ -15,30 +15,13 @@ const timeFormatter = new Intl.RelativeTimeFormat('en', {
   numeric: 'auto',
 });
 
-// Cache for formatted currencies to avoid repeated formatting
-const currencyCache = new Map<number, string>();
+// Disable caching to prevent consistency issues
+// const currencyCache = new Map<number, string>();
+// const timeAgoCache = new Map<number, string>();
 
-// Cache for time ago calculations
-const timeAgoCache = new Map<number, string>();
-
-// Optimized currency formatting with caching
+// Simple currency formatting without caching
 export const formatCurrency = (amount: number): string => {
-  if (currencyCache.has(amount)) {
-    return currencyCache.get(amount)!;
-  }
-  
-  const formatted = currencyFormatter.format(amount);
-  currencyCache.set(amount, formatted);
-  
-  // Limit cache size to prevent memory leaks
-  if (currencyCache.size > 1000) {
-    const firstKey = currencyCache.keys().next().value;
-    if (firstKey !== undefined) {
-      currencyCache.delete(firstKey);
-    }
-  }
-  
-  return formatted;
+  return currencyFormatter.format(amount);
 };
 
 // Optimized order total calculation
@@ -77,45 +60,25 @@ export const getTableStatusColor = (status: string): string => {
   }
 };
 
-// Optimized time ago calculation with caching
+// Simple time ago calculation without caching
 export const getTimeAgo = (date: Date): string => {
   const now = Date.now();
   const timeDiff = now - date.getTime();
-  
-  // Check cache first
-  if (timeAgoCache.has(timeDiff)) {
-    return timeAgoCache.get(timeDiff)!;
-  }
   
   const seconds = Math.floor(timeDiff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
   
-  let result: string;
-  
   if (days > 0) {
-    result = timeFormatter.format(-days, 'day');
+    return timeFormatter.format(-days, 'day');
   } else if (hours > 0) {
-    result = timeFormatter.format(-hours, 'hour');
+    return timeFormatter.format(-hours, 'hour');
   } else if (minutes > 0) {
-    result = timeFormatter.format(-minutes, 'minute');
+    return timeFormatter.format(-minutes, 'minute');
   } else {
-    result = timeFormatter.format(-seconds, 'second');
+    return timeFormatter.format(-seconds, 'second');
   }
-  
-  // Cache the result
-  timeAgoCache.set(timeDiff, result);
-  
-  // Limit cache size
-  if (timeAgoCache.size > 1000) {
-    const firstKey = timeAgoCache.keys().next().value;
-    if (firstKey !== undefined) {
-      timeAgoCache.delete(firstKey);
-    }
-  }
-  
-  return result;
 };
 
 // Optimized phone number validation with regex compilation
@@ -353,39 +316,19 @@ export const chunk = <T>(array: T[], size: number): T[][] => {
   return chunks;
 };
 
-// Optimized memoization function
+// Simplified function wrapper - no memoization to prevent consistency issues
 export const memoize = <T extends (...args: any[]) => any>(
   fn: T,
   getKey?: (...args: Parameters<T>) => string
 ): T => {
-  const cache = new Map<string, ReturnType<T>>();
-  
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = getKey ? getKey(...args) : JSON.stringify(args);
-    
-    if (cache.has(key)) {
-      return cache.get(key)!;
-    }
-    
-    const result = fn(...args);
-    cache.set(key, result);
-    
-    // Limit cache size
-    if (cache.size > 100) {
-      const firstKey = cache.keys().next().value;
-      if (firstKey !== undefined) {
-        cache.delete(firstKey);
-      }
-    }
-    
-    return result;
-  }) as T;
+  // Return original function without caching
+  return fn;
 };
 
-// Cleanup function to clear caches
+// Cleanup function - no longer needed without caches
 export const clearCaches = (): void => {
-  currencyCache.clear();
-  timeAgoCache.clear();
+  // No caches to clear - prevents consistency issues
+  console.log('Cache clearing disabled for consistency');
 };
 
 // QR Code utilities

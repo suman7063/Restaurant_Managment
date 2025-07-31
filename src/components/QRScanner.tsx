@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Camera, Eye, CheckCircle } from 'lucide-react';
 import { User, Restaurant } from './types';
+import { Input } from './ui';
 
 
 interface QRScannerProps {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Eye, Utensils, RefreshCw, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, Edit, Utensils, RefreshCw, Trash2 } from 'lucide-react';
 import { Table } from '../types';
 import { formatCurrency, getTableStatusColor } from '../utils';
 import { fetchTables } from '../../lib/database';
@@ -25,7 +25,7 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
   const [error, setError] = useState('');
 
   // Fetch tables from Supabase
-  const loadTables = async (isRefresh = false) => {
+  const loadTables = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setIsRefreshing(true);
@@ -43,12 +43,12 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [restaurantId]);
 
   // Load tables on component mount
   useEffect(() => {
     loadTables();
-  }, [restaurantId]);
+  }, [restaurantId, loadTables]);
 
   // Handle table added
   const handleTableAdded = () => {
@@ -96,7 +96,7 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
           </div>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"/>
         </div>
       </div>
     );

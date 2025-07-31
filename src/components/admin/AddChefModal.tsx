@@ -1,30 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
-import { Input, Modal } from '../ui';
+import { Input, Select, Modal } from '../ui';
 
-interface AddWaiterModalProps {
+interface KitchenStation {
+  id: string;
+  name: string;
+  description?: string;
+  cuisine_types: string[];
+  is_active: boolean;
+}
+
+interface AddChefModalProps {
   isOpen: boolean;
+  restaurantId: string;
   onClose: () => void;
-  onAdd: (waiterData: {
+  onAdd: (chefData: {
     name: string;
     email: string;
     phone?: string;
     password: string;
+    kitchen_station_id?: string;
   }) => Promise<void>;
 }
 
-const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd }) => {
+const AddChefModal: React.FC<AddChefModalProps> = ({ isOpen, restaurantId, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    kitchen_station_id: ''
   });
+  const [kitchenStations, setKitchenStations] = useState<KitchenStation[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingStations, setLoadingStations] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch kitchen stations
+  useEffect(() => {
+    const fetchKitchenStations = async () => {
+      try {
+        setLoadingStations(true);
+        const response = await fetch(`/api/admin/kitchen-stations?restaurantId=${restaurantId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setKitchenStations(data.kitchenStations || []);
+        }
+      } catch (error) {
+        console.error('Error fetching kitchen stations:', error);
+      } finally {
+        setLoadingStations(false);
+      }
+    };
+
+    fetchKitchenStations();
+  }, [restaurantId]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -68,9 +101,10 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
-        password: formData.password
+        password: formData.password,
+        kitchen_station_id: formData.kitchen_station_id || undefined
       });
-    } catch {
+    } catch (error) {
       // Error handling is done in the parent component
     } finally {
       setLoading(false);
@@ -90,7 +124,7 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add New Waiter"
+      title="Add New Chef"
       disabled={loading}
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -100,7 +134,7 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
             label="Full Name *"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Enter waiter's full name"
+            placeholder="Enter chef's full name"
             disabled={loading}
             error={errors.name}
           />
@@ -126,6 +160,26 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
             disabled={loading}
           />
 
+          {/* Kitchen Station Field */}
+          <div>
+            <Select
+              label="Kitchen Station (Optional)"
+              value={formData.kitchen_station_id}
+              onChange={(e) => handleInputChange('kitchen_station_id', e.target.value)}
+              disabled={loading || loadingStations}
+            >
+              <option value="">Select kitchen station</option>
+              {kitchenStations.map((station) => (
+                <option key={station.id} value={station.id}>
+                  {station.name} - {station.cuisine_types.join(', ')}
+                </option>
+              ))}
+            </Select>
+            {loadingStations && (
+              <p className="mt-1 text-sm text-gray-500">Loading kitchen stations...</p>
+            )}
+          </div>
+
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
@@ -140,7 +194,7 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
                 id="password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                   errors.password ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter password"
@@ -176,7 +230,7 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
                 id="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                   errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Confirm password"
@@ -212,12 +266,12 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
               type="submit"
               className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
                 loading
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-400 to-purple-600'
+                  ? 'bg-orange-400 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-700'
               }`}
               disabled={loading}
             >
-              {loading ? 'Adding...' : 'Add Waiter'}
+              {loading ? 'Adding...' : 'Add Chef'}
             </button>
           </div>
         </form>
@@ -225,4 +279,4 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
   );
 };
 
-export default AddWaiterModal;
+export default AddChefModal;

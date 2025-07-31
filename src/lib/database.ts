@@ -1,6 +1,29 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { Table, MenuItem, Order, User, CartItem, Restaurant } from '../components/types';
 
+// Export User as DatabaseUser for backwards compatibility
+export type DatabaseUser = User;
+
+// Disabled cache service to prevent consistency issues
+export const cacheService = {
+  clearAllCache: () => {
+    // Cache disabled for consistency
+    console.log('Cache disabled - no clearing needed');
+  },
+  getCacheStats: () => {
+    // Return zero stats since caching is disabled
+    return {
+      totalEntries: 0,
+      memoryUsage: 0,
+      hitRate: 0
+    };
+  },
+  clearExpiredCache: () => {
+    // Cache disabled for consistency
+    console.log('Cache disabled - no expired cache to clear');
+  }
+};
+
 export interface CreateTableData {
   table_number: number;
   qr_code: string;

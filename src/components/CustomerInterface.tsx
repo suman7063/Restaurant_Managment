@@ -10,7 +10,7 @@ import {
   sortItems
 } from './utils';
 import { menuService } from '../lib/database';
-import { Input, Select } from './ui';
+import { Input, Select, Modal } from './ui';
 import { 
   ShoppingCart, 
   X, 
@@ -90,17 +90,13 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">
-              {getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
-            </h3>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <X size={20} />
-            </button>
-          </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
+      maxWidth="md"
+    >
+      <div className="p-6">
 
           {/* Quantity Selector */}
           <div className="mb-4">
@@ -216,8 +212,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
             {getTranslation('addToCart')}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 });
 
@@ -545,10 +540,13 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
 
       {/* Checkout Modal */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">{getTranslation('confirmOrder')}</h3>
+        <Modal
+          isOpen={showCheckout}
+          onClose={() => setShowCheckout(false)}
+          title={getTranslation('confirmOrder')}
+          maxWidth="md"
+        >
+          <div className="p-6">
               <div className="space-y-2 mb-6">
                 {cart.map(item => (
                   <div key={item.id} className="flex justify-between">
@@ -579,8 +577,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
