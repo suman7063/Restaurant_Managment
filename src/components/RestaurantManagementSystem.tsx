@@ -1,28 +1,32 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, MenuItem, CartItem, Order, Table, Notification, MenuCustomization, MenuAddOn, Restaurant } from './types';
 import { addNotification } from './utils';
 import QRScanner from './QRScanner';
 import CustomerInterface from './CustomerInterface';
 import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
-
 import AnimatedOnboardingPage from './AnimatedOnboardingPage';
 import LandingPage from './LandingPage';
 import NotificationToast from './NotificationToast';
-
 import { orderService, tableService, userService } from '../lib/database';
+
+// Memoized components to prevent unnecessary re-renders
+const MemoizedQRScanner = React.memo(QRScanner);
+const MemoizedCustomerInterface = React.memo(CustomerInterface);
+const MemoizedWaiterDashboard = React.memo(WaiterDashboard);
+const MemoizedChefDashboard = React.memo(ChefDashboard);
+const MemoizedLandingPage = React.memo(LandingPage);
+const MemoizedAnimatedOnboardingPage = React.memo(AnimatedOnboardingPage);
 
 const RestaurantManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [restaurant] = useState<Restaurant | null>(null);
   const [showLanding, setShowLanding] = useState(true);
   const [isOnboarding, setIsOnboarding] = useState(false);
-
-    const [qrInput, setQrInput] = useState('');
+  const [qrInput, setQrInput] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -30,13 +34,16 @@ const RestaurantManagementSystem = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
+  // Memoized values to prevent unnecessary recalculations
+  const usersArray = useMemo(() => Object.values(users), [users]);
+  const tableCodes = useMemo(() => tables.map(t => t.qr_code).filter(Boolean), [tables]);
+  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart]);
+
+
   // Fetch initial data from Supabase only when not in onboarding
   useEffect(() => {
     const fetchInitialData = async () => {
-      // Don't fetch data if we're in onboarding or showing landing page
-      if (isOnboarding || showLanding) {
-        return;
-      }
+      if (isOnboarding || showLanding) return;
       
       try {
         const [ordersData, tablesData, usersData] = await Promise.all([
@@ -62,13 +69,12 @@ const RestaurantManagementSystem = () => {
     fetchInitialData();
   }, [isOnboarding, showLanding]);
 
-  // Simulate QR scanning
-  const simulateQrScan = () => {
+  // Optimized callbacks to prevent unnecessary re-renders
+  const simulateQrScan = useCallback(() => {
     setIsScanning(true);
     setLoading(true);
     
     setTimeout(() => {
-      const tableCodes = tables.map(t => t.qr_code).filter(Boolean);
       if (tableCodes.length === 0) {
         setIsScanning(false);
         setLoading(false);
@@ -81,20 +87,17 @@ const RestaurantManagementSystem = () => {
       setLoading(false);
       addNotification(notifications, setNotifications, `QR Code detected: ${randomCode}`, 'success');
     }, 2000);
-  };
+  }, [tableCodes, notifications]);
 
-  const handleQrScan = async () => {
+  const handleQrScan = useCallback(async () => {
     setLoading(true);
     try {
-      // Find table by QR code
       const table = tables.find(t => t.qr_code === qrInput.toUpperCase());
       
       if (table) {
-        // Find or create a customer user for this table
-        let customerUser = Object.values(users).find(u => u.table === table.table_number && u.role === 'customer');
+        let customerUser = usersArray.find(u => u.table === table.table_number && u.role === 'customer');
         
         if (!customerUser) {
-          // Create a new customer user for this table
           const newUser = await userService.createUser({
             name: `Customer at Table ${table.table_number}`,
             email: '',
@@ -126,48 +129,53 @@ const RestaurantManagementSystem = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [qrInput, tables, usersArray, notifications]);
 
-  const addToCart = (item: MenuItem, customization?: MenuCustomization | null, addOns?: MenuAddOn[], specialNotes?: string) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    if (existingItem) {
-      setCart(cart.map(cartItem => 
-        cartItem.id === item.id 
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
-    } else {
-      const cartItem: CartItem = {
-        ...item,
-        quantity: 1,
-        special_notes: specialNotes,
-        selected_customization: customization || undefined,
-        selected_add_ons: addOns || []
-      };
-      setCart([...cart, cartItem]);
-    }
+  const addToCart = useCallback((item: MenuItem, customization?: MenuCustomization | null, addOns?: MenuAddOn[], specialNotes?: string) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+      if (existingItem) {
+        return prevCart.map(cartItem => 
+          cartItem.id === item.id 
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        );
+      } else {
+        const cartItem: CartItem = {
+          ...item,
+          quantity: 1,
+          special_notes: specialNotes,
+          selected_customization: customization || undefined,
+          selected_add_ons: addOns || []
+        };
+        return [...prevCart, cartItem];
+      }
+    });
     addNotification(notifications, setNotifications, `${item.name} added to cart!`, 'success');
-  };
+  }, [notifications]);
 
-  const removeFromCart = (itemId: string) => {
-    const item = cart.find(item => item.id === itemId);
-    setCart(cart.filter(item => item.id !== itemId));
-    if (item) {
-      addNotification(notifications, setNotifications, `${item.name} removed from cart`, 'info');
-    }
-  };
+  const removeFromCart = useCallback((itemId: string) => {
+    setCart(prevCart => {
+      const item = prevCart.find(item => item.id === itemId);
+      const newCart = prevCart.filter(item => item.id !== itemId);
+      if (item) {
+        addNotification(notifications, setNotifications, `${item.name} removed from cart`, 'info');
+      }
+      return newCart;
+    });
+  }, [notifications]);
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
+  const updateQuantity = useCallback((itemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
       removeFromCart(itemId);
     } else {
-      setCart(cart.map(item => 
+      setCart(prevCart => prevCart.map(item => 
         item.id === itemId ? { ...item, quantity: newQuantity } : item
       ));
     }
-  };
+  }, [removeFromCart]);
 
-  const placeOrder = async () => {
+  const placeOrder = useCallback(async () => {
     if (cart.length === 0 || !currentUser) return;
     
     setLoading(true);
@@ -179,7 +187,7 @@ const RestaurantManagementSystem = () => {
       });
       
       if (newOrder) {
-        setOrders([newOrder, ...orders]);
+        setOrders(prevOrders => [newOrder, ...prevOrders]);
         setCart([]);
         addNotification(notifications, setNotifications, 'Order placed successfully! 🎉', 'success');
       } else {
@@ -204,12 +212,12 @@ const RestaurantManagementSystem = () => {
           waiter_id: undefined,
           waiter_name: undefined,
           timestamp: new Date(),
-          total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+          total: cartTotal,
           estimated_time: Math.max(...cart.map(item => item.prepTime)) + 5,
           is_joined_order: false,
           parent_order_id: undefined
         };
-        setOrders([simulatedOrder, ...orders]);
+        setOrders(prevOrders => [simulatedOrder, ...prevOrders]);
         setCart([]);
         addNotification(notifications, setNotifications, 'Order placed successfully! 🎉 (Development Mode)', 'success');
       }
@@ -219,10 +227,9 @@ const RestaurantManagementSystem = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [cart, currentUser, cartTotal, notifications]);
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    // Map the status string to the correct type
+  const updateOrderStatus = useCallback((orderId: string, newStatus: string) => {
     let status: 'active' | 'completed' | 'cancelled';
     switch (newStatus) {
       case 'active':
@@ -234,35 +241,37 @@ const RestaurantManagementSystem = () => {
         status = 'active';
     }
     
-    setOrders(orders.map(order => 
+    setOrders(prevOrders => prevOrders.map(order => 
       order.id === orderId 
         ? { ...order, status }
         : order
     ));
     addNotification(notifications, setNotifications, `Order ${orderId} status updated to ${status}`, 'success');
-  };
+  }, [notifications]);
 
-  const handleStartOnboarding = () => {
+  const handleStartOnboarding = useCallback(() => {
     setShowLanding(false);
     setIsOnboarding(true);
-  };
+  }, []);
 
-
+  // Memoized notification components
+  const notificationComponents = useMemo(() => 
+    notifications.map(notification => (
+      <NotificationToast key={notification.id} notification={notification} />
+    )), [notifications]
+  );
 
   // Landing Page
   if (showLanding) {
-    return <LandingPage onStartOnboarding={handleStartOnboarding} />;
+    return <MemoizedLandingPage onStartOnboarding={handleStartOnboarding} />;
   }
 
   // Onboarding Page
   if (isOnboarding) {
     return (
       <>
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-        
-        <AnimatedOnboardingPage />
+        {notificationComponents}
+        <MemoizedAnimatedOnboardingPage />
       </>
     );
   }
@@ -271,11 +280,8 @@ const RestaurantManagementSystem = () => {
   if (!currentUser) {
     return (
       <>
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-        
-        <QRScanner
+        {notificationComponents}
+        <MemoizedQRScanner
           onQrScan={handleQrScan}
           onSimulateQrScan={simulateQrScan}
           currentUser={currentUser}
@@ -289,11 +295,8 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'customer') {
     return (
       <>
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-        
-        <CustomerInterface
+        {notificationComponents}
+        <MemoizedCustomerInterface
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
           cart={cart}
@@ -312,11 +315,8 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'waiter') {
     return (
       <>
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-        
-        <WaiterDashboard
+        {notificationComponents}
+        <MemoizedWaiterDashboard
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
           orders={orders}
@@ -331,11 +331,8 @@ const RestaurantManagementSystem = () => {
   if (currentUser.role === 'chef') {
     return (
       <>
-        {notifications.map(notification => (
-          <NotificationToast key={notification.id} notification={notification} />
-        ))}
-        
-        <ChefDashboard
+        {notificationComponents}
+        <MemoizedChefDashboard
           currentUser={currentUser}
           setCurrentUser={setCurrentUser}
           orders={orders}
@@ -348,4 +345,4 @@ const RestaurantManagementSystem = () => {
   return null;
 };
 
-export default RestaurantManagementSystem;
+export default React.memo(RestaurantManagementSystem);

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { generateCSRFToken } from '../../../lib/authMiddleware'
@@ -20,21 +20,23 @@ function getDashboardUrl(role: string): string {
   }
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [csrfToken, setCsrfToken] = useState('')
+  const [csrfToken, setCsrfToken] = useState<string>(() => {
+    // Only generate CSRF token on client side to prevent hydration mismatch
+    if (typeof window !== 'undefined') {
+      return generateCSRFToken()
+    }
+    return ''
+  })
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || null
-
-  useEffect(() => {
-    setCsrfToken(generateCSRFToken())
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,8 +88,8 @@ export default function LoginPage() {
         router.push(targetUrl)
       }, 100)
       
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An unknown error occurred')
       console.error('Login error:', error)
     } finally {
       setLoading(false)
@@ -128,7 +130,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none block w-full px-3 py-2 border text-black border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -147,7 +149,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none block w-full px-3 py-2 border text-black border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter your password"
                   />
                 </div>
@@ -207,7 +209,7 @@ export default function LoginPage() {
               </div>
               
               <div className="mt-4 text-center text-sm text-gray-600">
-                <p>Customers don't need to login.</p>
+                <p>Customers don&apos;t need to login.</p>
                 <p>Just scan the QR code on your table to order.</p>
               </div>
             </div>
@@ -215,5 +217,26 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white mx-8 rounded-lg shadow-lg">
+            <div className="px-4 py-8 sm:px-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }

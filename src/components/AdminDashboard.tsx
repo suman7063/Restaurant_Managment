@@ -10,17 +10,13 @@ import {
   Settings,
   TrendingUp,
   Clock,
-  AlertCircle,
   CheckCircle,
   XCircle,
   Plus,
   Edit,
   Eye,
-  Trash2,
   Search,
-  Filter,
-  Download,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { User, Order, Table } from './types';
 import { formatCurrency, getOrderStatusColor, getTableStatusColor } from './utils';
@@ -238,7 +234,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     {/* Active indicator */}
                     {isActive && (
-                      <div className={`absolute inset-0 bg-gradient-to-r ${item.color} opacity-10`}></div>
+                      <div className={`absolute inset-0 bg-gradient-to-r ${item.color} opacity-10`}/>
                     )}
                     
                     <div className={`relative flex items-center space-x-4 px-4 py-4 ${
@@ -252,15 +248,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-600 group-hover:text-blue-600'}`} />
                       </div>
                       <div className="flex-1">
-                        <span className={`font-semibold block ${isActive ? 'text-white' : 'text-gray-900'}`}>
+                        <span className={`font-semibold block ${isActive ? 'text-gray-900' : 'text-gray-900'}`}>
                           {item.label}
                         </span>
-                        <span className={`text-xs ${isActive ? 'text-blue-100' : 'text-gray-500'}`}>
+                        <span className={`text-xs ${isActive ? 'text-blue-900' : 'text-gray-500'}`}>
                           {item.description}
                         </span>
                       </div>
                       {isActive && (
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <div className={`w-4 h-4 bg-gradient-to-r ${item.color}   rounded-full animate-pulse`}></div>
                       )}
                     </div>
                   </button>
@@ -304,7 +300,6 @@ const HomePage: React.FC<{ orders: Order[]; tables: Table[]; totalRevenue: numbe
   const occupiedTables = tables.filter(table => table.status === 'occupied').length;
   const totalOrders = orders.length;
   const activeOrders = orders.filter(order => order.status === 'active').length;
-  const completedOrders = orders.filter(order => order.status === 'completed').length;
 
   // Quick action handlers
   const handleQuickAction = (action: string) => {

@@ -1,27 +1,23 @@
 "use client"
-import React, { useState, useEffect } from 'react';
-import { User, MenuItem, CartItem, Order, OrderItem, MenuCustomization, MenuAddOn, Language } from './types';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { User, MenuItem, CartItem, MenuCustomization, MenuAddOn } from './types';
 import { useLanguage } from './LanguageContext';
 import { 
   formatCurrency, 
   calculateOrderTotal, 
-  getItemStatusColor, 
-  getTimeAgo,
-  validatePhoneNumber,
-  validateSpecialNotes
+  debounce,
+  searchItems,
+  sortItems
 } from './utils';
 import { menuService } from '../lib/database';
 import { 
   ShoppingCart, 
-  Clock, 
-  CheckCircle, 
   X, 
   Plus, 
   Minus, 
-  Edit3,
   User as UserIcon,
-  Phone,
-  MessageSquare
+  Search,
+  Filter
 } from 'lucide-react';
 
 interface CustomerInterfaceProps {
@@ -43,7 +39,8 @@ interface CustomizationModalProps {
   onAdd: (customization: MenuCustomization | null, addOns: MenuAddOn[], specialNotes: string) => void;
 }
 
-const CustomizationModal: React.FC<CustomizationModalProps> = ({ 
+// Memoized CustomizationModal component
+const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({ 
   item, 
   isOpen, 
   onClose, 
@@ -55,25 +52,30 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
   const [specialNotes, setSpecialNotes] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  const handleAdd = () => {
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedCustomization(null);
+      setSelectedAddOns([]);
+      setSpecialNotes('');
+      setQuantity(1);
+    }
+  }, [isOpen]);
+
+  const handleAdd = useCallback(() => {
     onAdd(selectedCustomization, selectedAddOns, specialNotes);
     onClose();
-    // Reset form
-    setSelectedCustomization(null);
-    setSelectedAddOns([]);
-    setSpecialNotes('');
-    setQuantity(1);
-  };
+  }, [selectedCustomization, selectedAddOns, specialNotes, onAdd, onClose]);
 
-  const toggleAddOn = (addOn: MenuAddOn) => {
+  const toggleAddOn = useCallback((addOn: MenuAddOn) => {
     setSelectedAddOns(prev => 
       prev.find(a => a.id === addOn.id)
         ? prev.filter(a => a.id !== addOn.id)
         : [...prev, addOn]
     );
-  };
+  }, []);
 
-  const calculateItemPrice = () => {
+  const calculateItemPrice = useMemo(() => {
     let price = item.price;
     if (selectedCustomization) {
       price += selectedCustomization.price_variation;
@@ -82,7 +84,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
       price += addOn.price;
     });
     return price * quantity;
-  };
+  }, [item.price, selectedCustomization, selectedAddOns, quantity]);
 
   if (!isOpen) return null;
 
@@ -92,16 +94,16 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {getLocalizedName(item)}
+              {getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
             </h3>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <X size={20} />
             </button>
           </div>
 
-          {/* Quantity */}
+          {/* Quantity Selector */}
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               {getTranslation('quantity')}
             </label>
             <div className="flex items-center space-x-3">
@@ -111,7 +113,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
               >
                 <Minus size={16} />
               </button>
-              <span className="text-lg font-medium w-8 text-center">{quantity}</span>
+              <span className="text-lg font-semibold w-8 text-center">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
                 className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
@@ -124,12 +126,12 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
           {/* Customizations */}
           {item.customizations && item.customizations.length > 0 && (
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                {getTranslation('customize')}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {getTranslation('customizations')}
               </label>
               <div className="space-y-2">
                 {item.customizations.map((customization) => (
-                  <label key={customization.id} className="flex items-center space-x-3">
+                  <label key={customization.id} className="flex items-center space-x-2">
                     <input
                       type="radio"
                       name="customization"
@@ -138,14 +140,14 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
                       onChange={() => setSelectedCustomization(customization)}
                       className="text-blue-600"
                     />
-                                         <span className="flex-1">
-                       {getLocalizedName(customization)}
-                     </span>
-                    {customization.price_variation > 0 && (
-                      <span className="text-sm text-gray-600">
-                        +{formatCurrency(customization.price_variation)}
-                      </span>
-                    )}
+                    <span className="text-sm">
+                      {getLocalizedName({ name: customization.name, name_hi: customization.name_hi || '', name_kn: customization.name_kn || '' })} 
+                      {customization.price_variation > 0 && (
+                        <span className="text-green-600 ml-1">
+                          (+{formatCurrency(customization.price_variation)})
+                        </span>
+                      )}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -155,23 +157,23 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
           {/* Add-ons */}
           {item.add_ons && item.add_ons.length > 0 && (
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                {getTranslation('add_ons')}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {getTranslation('addOns')}
               </label>
               <div className="space-y-2">
                 {item.add_ons.map((addOn) => (
-                  <label key={addOn.id} className="flex items-center space-x-3">
+                  <label key={addOn.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       checked={selectedAddOns.some(a => a.id === addOn.id)}
                       onChange={() => toggleAddOn(addOn)}
                       className="text-blue-600"
                     />
-                                         <span className="flex-1">
-                       {getLocalizedName(addOn)}
-                     </span>
-                    <span className="text-sm text-gray-600">
-                      +{formatCurrency(addOn.price)}
+                    <span className="text-sm">
+                      {getLocalizedName({ name: addOn.name, name_hi: addOn.name_hi || '', name_kn: addOn.name_kn || '' })} 
+                      <span className="text-green-600 ml-1">
+                        (+{formatCurrency(addOn.price)})
+                      </span>
                     </span>
                   </label>
                 ))}
@@ -180,44 +182,48 @@ const CustomizationModal: React.FC<CustomizationModalProps> = ({
           )}
 
           {/* Special Notes */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              {getTranslation('special_notes')}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {getTranslation('specialNotes')}
             </label>
             <textarea
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
-              placeholder="Any special requests? (e.g., less spicy, extra sauce, no onions)"
+              placeholder={getTranslation('specialNotesPlaceholder')}
               className="w-full p-3 border border-gray-300 rounded-lg resize-none"
               rows={3}
               maxLength={200}
             />
             <div className="text-xs text-gray-500 mt-1">
-              {specialNotes.length}/200 characters
+              {specialNotes.length}/200
             </div>
           </div>
 
-          {/* Total */}
-          <div className="border-t pt-4 mb-4">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{getTranslation('total')}:</span>
-              <span className="text-lg font-bold">{formatCurrency(calculateItemPrice())}</span>
-            </div>
+          {/* Total Price */}
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-lg font-semibold">{getTranslation('total')}:</span>
+            <span className="text-xl font-bold text-green-600">
+              {formatCurrency(calculateItemPrice)}
+            </span>
           </div>
 
+          {/* Add to Cart Button */}
           <button
             onClick={handleAdd}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
-            {getTranslation('add_to_cart')}
+            {getTranslation('addToCart')}
           </button>
         </div>
       </div>
     </div>
   );
-};
+});
 
-const CustomerInterface: React.FC<CustomerInterfaceProps> = ({
+CustomizationModal.displayName = 'CustomizationModal';
+
+// Memoized CustomerInterface component
+const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
   currentUser,
   setCurrentUser,
   cart,
@@ -228,294 +234,357 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = ({
   onUpdateQuantity,
   onPlaceOrder
 }) => {
-  const { getTranslation, getLocalizedName, getLocalizedDescription, language, setLanguage } = useLanguage();
+  const { getTranslation, getLocalizedName } = useLanguage();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [customizationModal, setCustomizationModal] = useState<{
-    isOpen: boolean;
-    item: MenuItem | null;
-  }>({ isOpen: false, item: null });
-  const [showOrderTracking, setShowOrderTracking] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'rating'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
 
+  // Memoized cart total
+  const cartTotal = useMemo(() => calculateOrderTotal(cart), [cart]);
+  const cartItemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+
+  // Memoized categories
+  const categories = useMemo(() => {
+    const cats = ['all', ...new Set(menuItems.map(item => item.category))];
+    return cats.sort();
+  }, [menuItems]);
+
+  // Debounced search
+  const debouncedSearch = useMemo(
+    () => debounce((term: string) => {
+      setSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  // Fetch menu items
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
         const items = await menuService.getAllMenuItems();
         setMenuItems(items);
+        setFilteredItems(items);
       } catch (error) {
-        console.error("Failed to fetch menu items:", error);
-        // Optionally, set an error state or display a message to the user
+        console.error('Error fetching menu items:', error);
       }
     };
 
     fetchMenuItems();
   }, []);
 
-  const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))];
+  // Filter and sort items
+  useEffect(() => {
+    let filtered = menuItems;
 
-  const filteredItems = selectedCategory === 'All' 
-    ? menuItems 
-    : menuItems.filter(item => item.category === selectedCategory);
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
 
-  const handleAddToCart = (item: MenuItem) => {
-    if (item.customizations || item.add_ons) {
-      setCustomizationModal({ isOpen: true, item });
+    // Filter by search term
+    if (searchTerm.trim()) {
+      filtered = searchItems(filtered, searchTerm, ['name', 'description']);
+    }
+
+    // Sort items
+    filtered = sortItems(filtered, sortBy, sortDirection);
+
+    setFilteredItems(filtered);
+  }, [menuItems, selectedCategory, searchTerm, sortBy, sortDirection]);
+
+  // Handle add to cart
+  const handleAddToCart = useCallback((item: MenuItem) => {
+    if (item.customizations && item.customizations.length > 0 || 
+        item.add_ons && item.add_ons.length > 0) {
+      setSelectedItem(item);
+      setShowCustomizationModal(true);
     } else {
       onAddToCart(item);
     }
-  };
+  }, [onAddToCart]);
 
-  const handleCustomizationAdd = (customization: MenuCustomization | null, addOns: MenuAddOn[], specialNotes: string) => {
-    if (customizationModal.item) {
-      onAddToCart(customizationModal.item, customization, addOns, specialNotes);
+  // Handle customization add
+  const handleCustomizationAdd = useCallback((customization: MenuCustomization | null, addOns: MenuAddOn[], specialNotes: string) => {
+    if (selectedItem) {
+      onAddToCart(selectedItem, customization, addOns, specialNotes);
     }
-  };
+  }, [selectedItem, onAddToCart]);
 
-  const handleCheckout = () => {
-    if (!customerName.trim() || !customerPhone.trim()) {
-      alert('Please provide your name and phone number');
-      return;
-    }
-    if (!validatePhoneNumber(customerPhone)) {
-      alert('Please enter a valid phone number');
+  // Handle checkout
+  const handleCheckout = useCallback(() => {
+    if (cart.length === 0) {
       return;
     }
     setShowCheckout(true);
-  };
+  }, [cart]);
 
-  const handlePlaceOrder = () => {
+  // Handle place order
+  const handlePlaceOrder = useCallback(() => {
     onPlaceOrder();
     setShowCheckout(false);
-    setCustomerName('');
-    setCustomerPhone('');
-  };
+  }, [onPlaceOrder]);
+
+  // Handle logout
+  const handleLogout = useCallback(() => {
+    setCurrentUser(null);
+  }, [setCurrentUser]);
+
+  // Memoized cart items
+  const cartItems = useMemo(() => 
+    cart.map(item => (
+      <div key={item.id} className="flex items-center justify-between p-3 border-b border-gray-200">
+        <div className="flex-1">
+          <h4 className="font-semibold">{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}</h4>
+          <p className="text-sm text-gray-600">
+            {formatCurrency(item.price)} x {item.quantity}
+          </p>
+          {item.special_notes && (
+            <p className="text-xs text-gray-500 mt-1">{item.special_notes}</p>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+            className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+          >
+            <Minus size={16} />
+          </button>
+          <span className="w-8 text-center">{item.quantity}</span>
+          <button
+            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+            className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
+    )), [cart, getLocalizedName, onUpdateQuantity]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {getTranslation('welcome')}
-              </h1>
-              <p className="text-gray-600">Table {currentUser.table}</p>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
-              {/* Language Selector */}
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="en">English</option>
-                <option value="hi">हिंदी</option>
-                <option value="kn">ಕನ್ನಡ</option>
-              </select>
-              
-              {/* Cart Icon */}
-              <button
-                onClick={() => setShowCheckout(true)}
-                className="relative p-2 text-gray-600 hover:text-gray-900"
-              >
-                <ShoppingCart size={24} />
-                {cart.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {cart.length}
+              <h1 className="text-2xl font-bold text-gray-900">
+                {getTranslation('restaurantName')}
+              </h1>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <UserIcon size={16} />
+                <span>{currentUser.name}</span>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              {getTranslation('logout')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Menu Section */}
+          <div className="lg:col-span-2">
+            {/* Search and Filter */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder={getTranslation('searchMenu')}
+                      onChange={(e) => debouncedSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {categories.map(category => (
+                      <option key={category} value={category}>
+                        {getTranslation(category)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={`${sortBy}-${sortDirection}`}
+                    onChange={(e) => {
+                      const [sort, direction] = e.target.value.split('-') as [typeof sortBy, typeof sortDirection];
+                      setSortBy(sort);
+                      setSortDirection(direction);
+                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="name-asc">{getTranslation('sortByName')}</option>
+                    <option value="price-asc">{getTranslation('sortByPriceLow')}</option>
+                    <option value="price-desc">{getTranslation('sortByPriceHigh')}</option>
+                    <option value="rating-desc">{getTranslation('sortByRating')}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Menu Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredItems.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="aspect-w-16 aspect-h-9 bg-gray-200">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
+                        className="w-full h-48 object-cover"
+                        loading="lazy"
+                      />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold text-lg">{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}</h3>
+                      <span className="text-lg font-bold text-green-600">
+                        {formatCurrency(item.price)}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      {getLocalizedName({ name: item.description, name_hi: item.description_hi || '', name_kn: item.description_kn || '' })}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">
+                          ⭐ {item.rating}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          ⏱️ {item.prepTime}min
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        {getTranslation('add')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredItems.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">{getTranslation('noItemsFound')}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Cart Section */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm sticky top-8">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">{getTranslation('yourOrder')}</h2>
+                  <div className="flex items-center space-x-2">
+                    <ShoppingCart size={20} />
+                    <span className="text-sm text-gray-600">({cartItemCount})</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto">
+                {cartItems}
+              </div>
+
+              <div className="p-6 border-t border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold">{getTranslation('total')}:</span>
+                  <span className="text-xl font-bold text-green-600">
+                    {formatCurrency(cartTotal)}
                   </span>
-                )}
-              </button>
-              
-              <button
-                onClick={() => setCurrentUser(null)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <X size={24} />
-              </button>
+                </div>
+
+                <button
+                  onClick={handleCheckout}
+                  disabled={cart.length === 0 || loading}
+                  className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? getTranslation('processing') : getTranslation('placeOrder')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Category Tabs */}
-        <div className="flex space-x-2 mb-6 overflow-x-auto">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                selectedCategory === category
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-                             {getLocalizedName(category)}
-            </button>
-          ))}
-        </div>
-
-        {/* Menu Items */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div key={item.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="h-48 bg-gray-200 flex items-center justify-center">
-                <span className="text-4xl">🍽️</span>
-              </div>
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg">
-                    {getLocalizedName(item)}
-                  </h3>
-                  <span className="text-lg font-bold text-blue-600">
-                    {formatCurrency(item.price)}
-                  </span>
-                </div>
-                                 <p className="text-gray-600 text-sm mb-3">
-                   {getLocalizedDescription(item)}
-                 </p>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      ⏱️ {item.prepTime} min
-                    </span>
-                    {item.popular && (
-                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                        Popular
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleAddToCart(item)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    {getTranslation('add_to_cart')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Customization Modal */}
+      {selectedItem && (
+        <CustomizationModal
+          item={selectedItem}
+          isOpen={showCustomizationModal}
+          onClose={() => {
+            setShowCustomizationModal(false);
+            setSelectedItem(null);
+          }}
+          onAdd={handleCustomizationAdd}
+        />
+      )}
 
       {/* Checkout Modal */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Checkout</h3>
-                <button onClick={() => setShowCheckout(false)} className="text-gray-500">
-                  <X size={20} />
+              <h3 className="text-lg font-semibold mb-4">{getTranslation('confirmOrder')}</h3>
+              <div className="space-y-2 mb-6">
+                {cart.map(item => (
+                  <div key={item.id} className="flex justify-between">
+                    <span>{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })} x {item.quantity}</span>
+                    <span>{formatCurrency(item.price * item.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t pt-4 mb-6">
+                <div className="flex justify-between font-semibold">
+                  <span>{getTranslation('total')}:</span>
+                  <span>{formatCurrency(cartTotal)}</span>
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowCheckout(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  {getTranslation('cancel')}
+                </button>
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={loading}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? getTranslation('processing') : getTranslation('confirm')}
                 </button>
               </div>
-
-              {cart.length === 0 ? (
-                <div className="text-center py-8">
-                  <ShoppingCart size={48} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600">Your cart is empty</p>
-                </div>
-              ) : (
-                <>
-                  {/* Customer Details */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">
-                      <UserIcon size={16} className="inline mr-2" />
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full p-3 border text-black border-gray-300 rounded-lg"
-                      placeholder="Enter your name"
-                    />
-                  </div>
-                  
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">
-                      <Phone size={16} className="inline mr-2" />
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full p-3 border text-black border-gray-300 rounded-lg"
-                      placeholder="Enter your phone number"
-                    />
-                  </div>
-
-                  {/* Cart Items */}
-                  <div className="mb-4">
-                    <h4 className="font-medium mb-2">Order Summary</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {cart.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <div className="flex-1">
-                                                         <p className="font-medium">{getLocalizedName(item)}</p>
-                            <p className="text-sm text-gray-600">
-                              Qty: {item.quantity} × {formatCurrency(item.price)}
-                            </p>
-                            {item.special_notes && (
-                              <p className="text-xs text-gray-500">
-                                <MessageSquare size={12} className="inline mr-1" />
-                                {item.special_notes}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">
-                              {formatCurrency(item.price * item.quantity)}
-                            </span>
-                            <button
-                              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Minus size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Total */}
-                  <div className="border-t pt-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{getTranslation('total')}:</span>
-                      <span className="text-lg font-bold">
-                        {formatCurrency(calculateOrderTotal(cart))}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handlePlaceOrder}
-                    disabled={loading || !customerName.trim() || !customerPhone.trim()}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                  >
-                    {loading ? getTranslation('loading') : getTranslation('place_order')}
-                  </button>
-                </>
-              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Customization Modal */}
-      <CustomizationModal
-        item={customizationModal.item!}
-        isOpen={customizationModal.isOpen}
-        onClose={() => setCustomizationModal({ isOpen: false, item: null })}
-        onAdd={handleCustomizationAdd}
-      />
     </div>
   );
-};
+});
+
+CustomerInterface.displayName = 'CustomerInterface';
 
 export default CustomerInterface;

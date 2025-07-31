@@ -1,29 +1,19 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { 
-  Building2, 
   User, 
-  CreditCard, 
   CheckCircle, 
   ArrowRight, 
   ArrowLeft,
-  Globe,
-  Users,
-  Settings,
   Sparkles,
   Star,
   Zap,
   Shield,
-  Clock,
-  Phone,
-  Mail,
-  MapPin,
-  ChefHat,
-  Languages
+  Clock
 } from 'lucide-react';
-import { Restaurant, User as UserType, SubscriptionPlan, UserRole, Language } from './types';
+import { Restaurant, User as UserType } from './types';
 import { userService, restaurantService } from '../lib/database';
 import { authService } from '../lib/auth';
 
@@ -32,13 +22,11 @@ const AnimatedOnboardingPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [adminQRCode, setAdminQRCode] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
   // Animated progress value
   const progress = useMotionValue(0);
   const progressPercent = useTransform(progress, [0, 3], [0, 100]);
-  const progressSpring = useSpring(progressPercent, { stiffness: 100, damping: 20 });
 
   // Restaurant details
   const [restaurantData, setRestaurantData] = useState({
@@ -429,7 +417,7 @@ const AnimatedOnboardingPage: React.FC = () => {
                          value={restaurantData.email}
                          onChange={(e) => handleRestaurantChange('email', e.target.value)}
                          placeholder="Enter email address"
-                         className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
+                         className="w-full px-4 py-4 border-2 text-black border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
                        />
                     </div>
                   </div>

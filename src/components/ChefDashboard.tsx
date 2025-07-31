@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChefHat, Clock, CheckCircle } from 'lucide-react';
-import { User, Order, MenuItem } from './types';
-import { formatCurrency, getOrderStatusColor, getItemStatusColor } from './utils';
+import { User, Order } from './types';
+import { getOrderStatusColor } from './utils';
 
 interface ChefDashboardProps {
   currentUser: User;
@@ -117,8 +117,8 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
                     <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getOrderStatusColor(order.status)}`}>
                       {order.status}
                     </span>
-                    {order.estimatedTime && (
-                      <p className="text-xs text-orange-600 font-bold mt-1">~{order.estimatedTime} min</p>
+                    {order.estimated_time && (
+                      <p className="text-xs text-orange-600 font-bold mt-1">~{order.estimated_time} min</p>
                     )}
                   </div>
                 </div>
@@ -127,27 +127,27 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
                   {order.items.map(item => (
                     <div key={item.id} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded-lg">
                       <div className="flex items-center space-x-2 text-black">
-                        <span className="text-lg">{item.image}</span>
-                        <span>{item.quantity}x {item.name}</span>
+                        <span className="text-lg">🍽️</span>
+                        <span>{item.quantity}x {item.menu_item.name}</span>
                       </div>
-                      <span className="text-gray-500 font-medium">{item.prepTime}min</span>
+                                              <span className="text-gray-500 font-medium">{item.menu_item.prepTime}min</span>
                     </div>
                   ))}
                 </div>
                 
                 <div className="flex space-x-2">
-                  {order.status === 'pending' && (
+                  {order.status === 'active' && (
                     <button
-                      onClick={() => onUpdateOrderStatus(order.id, 'preparing')}
+                      onClick={() => onUpdateOrderStatus(order.id, 'completed')}
                       className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 px-3 rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 font-bold text-sm flex items-center justify-center space-x-2 transform hover:scale-105 shadow-lg"
                     >
                       <ChefHat className="w-4 h-4" />
                       <span>Start Cooking</span>
                     </button>
                   )}
-                  {order.status === 'preparing' && (
+                  {order.status === 'active' && (
                     <button
-                      onClick={() => onUpdateOrderStatus(order.id, 'ready')}
+                      onClick={() => onUpdateOrderStatus(order.id, 'completed')}
                       className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-3 rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-bold text-sm flex items-center justify-center space-x-2 transform hover:scale-105 shadow-lg"
                     >
                       <CheckCircle className="w-4 h-4" />
@@ -159,7 +159,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
             ))}
           </div>
           
-          {orders.filter(order => order.status !== 'delivered').length === 0 && (
+          {orders.filter(order => order.status !== 'completed').length === 0 && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">👨‍🍳</div>
               <p className="text-gray-500 text-lg">Kitchen is all caught up!</p>

@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     
     // Get client IP for rate limiting
     const forwarded = request.headers.get('x-forwarded-for')
-    const ip = forwarded ? forwarded.split(',')[0].trim() : request.ip || 'unknown'
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
 
     // Rate limiting disabled for now
     const rateLimit = { allowed: true, remainingAttempts: 999 }

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Camera, Eye, CheckCircle } from 'lucide-react';
 import { User, Restaurant } from './types';
-import { generateQRCode } from './utils';
-import { userService } from '../lib/database';
+
 
 interface QRScannerProps {
   onQrScan: () => void;
