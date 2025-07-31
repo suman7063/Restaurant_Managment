@@ -166,7 +166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             case 'tables':
               return <TableManagementPage restaurantId={restaurantId} />;
             case 'waiters':
-              return <WaiterManagementPage />;
+              return <WaiterManagementPage restaurantId={restaurantId} />;
             case 'chefs':
               return <ChefManagementPage />;
             case 'menu':

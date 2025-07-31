@@ -349,9 +349,27 @@ CREATE POLICY "Users can read own data or all during setup" ON users
     )
   );
 
--- Allow users to update their own data
-CREATE POLICY "Users can update own data" ON users
-  FOR UPDATE USING (deleted_at IS NULL AND auth.uid() = id);
+-- Allow users to update with admin privileges
+-- This allows users to update their own data AND admins/owners to update staff
+CREATE POLICY "Users can update with admin privileges" ON users
+  FOR UPDATE USING (
+    deleted_at IS NULL AND (
+      -- Allow if no auth context (service role operations)
+      auth.uid() IS NULL
+      OR
+      -- Allow users to update their own data
+      auth.uid() = id
+      OR
+      -- Allow admins/owners to update staff within same restaurant
+      EXISTS (
+        SELECT 1 FROM users as admin_user
+        WHERE admin_user.id = auth.uid()
+        AND admin_user.role IN ('admin', 'owner')
+        AND admin_user.restaurant_id = users.restaurant_id
+        AND admin_user.deleted_at IS NULL
+      )
+    )
+  );
 
 -- Menu items are readable within the restaurant context
 CREATE POLICY "Menu items are publicly readable within restaurant" ON menu_items

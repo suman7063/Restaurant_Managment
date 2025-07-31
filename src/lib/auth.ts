@@ -1,6 +1,5 @@
 import { supabase } from './supabase'
 import bcrypt from 'bcryptjs'
-import crypto from 'crypto'
 import { DatabaseUser } from './database'
 
 export interface AuthSession {
@@ -41,15 +40,22 @@ const REMEMBER_ME_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
 const MAX_LOGIN_ATTEMPTS = 5
 const LOCKOUT_DURATION = 30 * 60 * 1000 // 30 minutes in milliseconds
 
+// Helper function to generate random bytes using Web Crypto API (Edge Runtime compatible)
+function generateRandomBytes(length: number): string {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 class AuthService {
   // Generate secure session token
   private generateSessionToken(): string {
-    return crypto.randomBytes(32).toString('hex')
+    return generateRandomBytes(32)
   }
 
   // Generate secure reset token
   private generateResetToken(): string {
-    return crypto.randomBytes(32).toString('hex')
+    return generateRandomBytes(32)
   }
 
   // Hash password using bcrypt
@@ -429,7 +435,7 @@ class AuthService {
     } = userData
 
     // Generate temporary password if not provided
-    const tempPassword = temporary_password || crypto.randomBytes(8).toString('hex')
+    const tempPassword = temporary_password || generateRandomBytes(8)
     const passwordHash = await this.hashPassword(tempPassword)
 
     const { data: user, error } = await supabase
