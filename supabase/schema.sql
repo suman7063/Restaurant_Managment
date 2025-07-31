@@ -345,12 +345,29 @@ CREATE POLICY "Staff can update tables within restaurant" ON restaurant_tables
     )
   );
 
--- Authentication session policies
-CREATE POLICY "Users can manage their own sessions" ON auth_sessions
-  FOR ALL USING (user_id = auth.uid());
+-- Authentication session policies - allow creation during login (when auth.uid() is NULL)
+-- Drop any existing restrictive policies first
+DROP POLICY IF EXISTS "Users can manage their own sessions" ON auth_sessions;
+DROP POLICY IF EXISTS "Users can manage their own reset tokens" ON password_reset_tokens;
 
--- Password reset token policies
-CREATE POLICY "Users can manage their own reset tokens" ON password_reset_tokens
-  FOR ALL USING (user_id = auth.uid());
+-- Create new policies that allow session creation during login
+CREATE POLICY "Allow session creation and management" ON auth_sessions
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can read their own sessions" ON auth_sessions
+  FOR SELECT USING (user_id = auth.uid() OR auth.uid() IS NULL);
+
+CREATE POLICY "Users can delete their own sessions" ON auth_sessions
+  FOR DELETE USING (user_id = auth.uid() OR auth.uid() IS NULL);
+
+-- Password reset token policies - allow creation during reset (when auth.uid() is NULL)
+CREATE POLICY "Allow password reset token creation" ON password_reset_tokens
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can read their own reset tokens" ON password_reset_tokens
+  FOR SELECT USING (user_id = auth.uid() OR auth.uid() IS NULL);
+
+CREATE POLICY "Users can update their own reset tokens" ON password_reset_tokens
+  FOR UPDATE USING (user_id = auth.uid() OR auth.uid() IS NULL);
 
 -- No sample data - tables will be populated through the application 

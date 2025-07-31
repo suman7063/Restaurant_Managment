@@ -12,27 +12,43 @@ export default function AdminDashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if admin is logged in
-    const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn')
-    const adminUserData = localStorage.getItem('adminUser')
-
-    if (!isAdminLoggedIn || !adminUserData) {
-      router.push('/admin/login')
-      return
-    }
-
-    try {
-      const user = JSON.parse(adminUserData)
-      setAdminUser(user)
-      
-      // Load sample data for demonstration
-      loadSampleData()
-    } catch (error) {
-      console.error('Error parsing admin user data:', error)
-      router.push('/admin/login')
-    } finally {
+    // Check authentication using the new auth system
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          const userData = await response.json()
+          if (!['admin', 'owner'].includes(userData.user?.role)) {
+            router.push('/auth/login')
+            return
+          }
+          // Convert to old User format for compatibility
+          setAdminUser({
+            id: userData.user.id,
+            name: userData.user.name,
+            email: userData.user.email,
+            phone: '',
+            role: userData.user.role,
+            language: userData.user.language,
+            kitchen_station: userData.user.kitchen_station_name,
+            table: undefined
+          })
+          
+          // Load sample data for demonstration
+          loadSampleData()
+        } else {
+          router.push('/auth/login')
+          return
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        router.push('/auth/login')
+        return
+      }
       setLoading(false)
     }
+
+    checkAuth()
   }, [router])
 
   const loadSampleData = () => {

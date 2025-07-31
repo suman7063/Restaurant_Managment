@@ -7,6 +7,7 @@ import {
   CheckCircle, 
 } from 'lucide-react';
 import { User as UserType } from './types';
+import { authService } from '../lib/auth';
 import { userService, restaurantService} from '../lib/database';
 
 const OnboardingPage: React.FC = () => {
@@ -189,17 +190,25 @@ const OnboardingPage: React.FC = () => {
           throw new Error('Missing required admin user fields');
         }
 
-        console.log('Calling userService.createUser...');
-        const createdUser = await userService.createUser(adminUser);
+        console.log('Calling authService.createStaffUser...');
+        const createdUser = await authService.createStaffUser({
+          name: adminData.name,
+          email: restaurantData.email, // Use restaurant email for admin (as per form design)
+          phone: restaurantData.phone, // Use restaurant phone for admin (as per form design)
+          role: 'admin',
+          restaurant_id: createdRestaurant.id,
+          language: restaurantData.languages[0] as 'en' | 'hi' | 'kn',
+          temporary_password: adminData.password
+        });
         console.log('User creation result:', createdUser);
         
         if (createdUser) {
           console.log('Both restaurant and user created successfully!');
           setAdminQRCode(createdUser.id); // Use user ID instead of QR code
           setIsComplete(true);
-          // Redirect to admin login page after a short delay to show success message
+          // Redirect to unified login page after a short delay to show success message
           setTimeout(() => {
-            router.push('/admin/login');
+            router.push('/auth/login');
           }, 3000);
         } else {
           throw new Error('Failed to create admin user');

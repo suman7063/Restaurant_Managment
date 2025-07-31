@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Restaurant, User as UserType, SubscriptionPlan, UserRole, Language } from './types';
 import { userService, restaurantService } from '../lib/database';
+import { authService } from '../lib/auth';
 
 const AnimatedOnboardingPage: React.FC = () => {
   const router = useRouter();
@@ -211,24 +212,21 @@ const AnimatedOnboardingPage: React.FC = () => {
       const restaurant = await restaurantService.createRestaurant(restaurantPayload);
       if (!restaurant) throw new Error("Failed to create restaurant.");
 
-      // 2. Create admin user
-      const adminPayload = {
+      // 2. Create admin user with proper password hashing
+      const admin = await authService.createStaffUser({
         name: adminData.name,
-        email: restaurant.email,
-        phone: restaurant.phone,
-        role: 'admin' as UserRole,
-        qr_code: "ADMIN_" + Date.now(),
-        language: (restaurant.languages[0] || "en") as Language,
-        kitchen_station: undefined,
-        table: undefined,
+        email: restaurantData.email, // Use restaurant email for admin (as per form design)
+        phone: restaurantData.phone, // Use restaurant phone for admin (as per form design)
+        role: 'admin',
         restaurant_id: restaurant.id,
-      };
-      const admin = await userService.createUser(adminPayload);
+        language: (restaurant.languages[0] || "en") as 'en' | 'hi' | 'kn',
+        temporary_password: adminData.password
+      });
       if (!admin) throw new Error("Failed to create admin user.");
 
       setIsComplete(true);
       setTimeout(() => {
-        router.push('/admin/login');
+        router.push('/auth/login');
       }, 2000);
     } catch (error) {
       const err = error as Error;
