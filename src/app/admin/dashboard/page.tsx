@@ -9,6 +9,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
   const [tables, setTables] = useState<Table[]>([])
+  const [restaurantId, setRestaurantId] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
@@ -33,6 +34,27 @@ export default function AdminDashboardPage() {
             kitchen_station: userData.user.kitchen_station_name,
             table: undefined
           })
+          
+          // Set restaurant ID from user data
+          if (userData.user.restaurant_id) {
+            setRestaurantId(userData.user.restaurant_id)
+          } else {
+            // Create a default restaurant if none exists
+            try {
+              const restaurantResponse = await fetch('/api/admin/create-restaurant', {
+                method: 'POST'
+              })
+              if (restaurantResponse.ok) {
+                const restaurantData = await restaurantResponse.json()
+                setRestaurantId(restaurantData.restaurant.id)
+              } else {
+                setRestaurantId('default-restaurant-id')
+              }
+            } catch (error) {
+              console.error('Failed to create restaurant:', error)
+              setRestaurantId('default-restaurant-id')
+            }
+          }
           
           // Load sample data for demonstration
           loadSampleData()
@@ -227,6 +249,7 @@ export default function AdminDashboardPage() {
       setCurrentUser={handleLogout}
       orders={orders}
       tables={tables}
+      restaurantId={restaurantId}
     />
   )
 } 

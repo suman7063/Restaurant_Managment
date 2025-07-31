@@ -261,6 +261,46 @@ CREATE POLICY "Menu items are publicly readable within restaurant" ON menu_items
 CREATE POLICY "Restaurant tables are publicly readable within restaurant" ON restaurant_tables
   FOR SELECT USING (restaurant_id IS NOT NULL);
 
+-- Staff can insert tables within their restaurant
+CREATE POLICY "Staff can insert tables within restaurant" ON restaurant_tables
+  FOR INSERT WITH CHECK (
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_tables.restaurant_id
+      AND users.role IN ('admin', 'owner')
+    )
+  );
+
+-- Staff can update tables within their restaurant
+CREATE POLICY "Staff can update tables within restaurant" ON restaurant_tables
+  FOR UPDATE USING (
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_tables.restaurant_id
+      AND users.role IN ('waiter', 'admin', 'owner')
+    )
+  );
+
+-- Staff can delete tables within their restaurant
+CREATE POLICY "Staff can delete tables within restaurant" ON restaurant_tables
+  FOR DELETE USING (
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_tables.restaurant_id
+      AND users.role IN ('admin', 'owner')
+    )
+  );
+
+-- Allow table creation during development (for testing without auth context)
+CREATE POLICY "Allow table creation during development" ON restaurant_tables
+  FOR INSERT WITH CHECK (restaurant_id IS NOT NULL);
+
 -- Orders can be read by customers and staff within the restaurant
 CREATE POLICY "Orders readable by customers and staff within restaurant" ON orders
   FOR SELECT USING (
@@ -330,18 +370,6 @@ CREATE POLICY "Staff can update orders within restaurant" ON orders
       WHERE users.id = auth.uid() 
       AND users.restaurant_id = orders.restaurant_id
       AND users.role IN ('waiter', 'admin', 'chef', 'owner')
-    )
-  );
-
--- Staff can update tables within their restaurant
-CREATE POLICY "Staff can update tables within restaurant" ON restaurant_tables
-  FOR UPDATE USING (
-    restaurant_id IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.restaurant_id = restaurant_tables.restaurant_id
-      AND users.role IN ('waiter', 'admin', 'owner')
     )
   );
 

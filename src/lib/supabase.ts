@@ -32,5 +32,11 @@ export const supabase = hasValidCredentials
   ? createClient(supabaseUrl, supabaseAnonKey)
   : createClient('https://placeholder.supabase.co', 'placeholder-key')
 
+// Create admin Supabase client with service role key for admin operations
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+export const supabaseAdmin = hasValidCredentials && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : supabase // Fallback to regular client if service key not available
+
 // Export a flag to check if Supabase is properly configured
 export const isSupabaseConfigured = hasValidCredentials 
