@@ -21,7 +21,10 @@ export async function PUT(
       .from('restaurant_menu_categories')
       .update(updateData)
       .eq('id', categoryId)
-      .select()
+      .select(`
+        *,
+        menu_items:menu_items(count)
+      `)
       .single();
 
     if (error) {
@@ -34,7 +37,10 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      data: category
+      category: {
+        ...category,
+        menu_items_count: category.menu_items?.[0]?.count || 0
+      }
     });
   } catch (error) {
     console.error('Exception in PUT /api/admin/menu-categories/[id]:', error);

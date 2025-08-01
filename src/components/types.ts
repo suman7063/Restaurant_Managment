@@ -29,6 +29,7 @@ export interface MenuCategory {
   display_order: number;
   is_active: boolean;
   restaurant_id: string;
+  menu_items_count?: number;
   created_at?: Date;
   updated_at?: Date;
   deleted_at?: Date | null;

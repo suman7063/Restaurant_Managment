@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
 
     const { data: categories, error } = await supabase
       .from('restaurant_menu_categories')
-      .select('*')
+      .select(`
+        *,
+        menu_items:menu_items(count)
+      `)
       .eq('restaurant_id', restaurantId)
       .is('deleted_at', null)
       .order('display_order', { ascending: true });
@@ -29,9 +32,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Transform data to include menu items count
+    const transformedCategories = (categories || []).map(category => ({
+      ...category,
+      menu_items_count: category.menu_items?.[0]?.count || 0
+    }));
+
     return NextResponse.json({
       success: true,
-      data: categories || []
+      categories: transformedCategories
     });
   } catch (error) {
     console.error('Exception in GET /api/admin/menu-categories:', error);
@@ -77,7 +86,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: category
+      category: {
+        ...category,
+        menu_items_count: 0
+      }
     });
   } catch (error) {
     console.error('Exception in POST /api/admin/menu-categories:', error);

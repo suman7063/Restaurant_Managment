@@ -18,6 +18,7 @@ import {
   WaiterManagementPage,
   ChefManagementPage,
   MenuManagementPage,
+  MenuCategoriesManagementPage,
   OrderManagementPage,
   ReportsPage,
   SettingsPage
@@ -32,7 +33,7 @@ interface AdminDashboardProps {
   restaurantId: string;
 }
 
-type AdminPage = 'home' | 'tables' | 'waiters' | 'chefs' | 'menu' | 'orders' | 'reports' | 'settings';
+type AdminPage = 'home' | 'tables' | 'waiters' | 'chefs' | 'menu' | 'menu-categories' | 'orders' | 'reports' | 'settings';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
@@ -126,6 +127,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       color: 'from-pink-500 to-pink-600'
     },
     { 
+      id: 'menu-categories', 
+      label: 'Menu Categories', 
+      icon: FileText,
+      description: 'Organize menu categories',
+      color: 'from-emerald-500 to-emerald-600'
+    },
+    { 
       id: 'orders', 
       label: 'Order Management', 
       icon: ShoppingCart,
@@ -172,6 +180,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               return <ChefManagementPage restaurantId={restaurantId} />;
             case 'menu':
               return <MenuManagementPage restaurantId={restaurantId} />;
+            case 'menu-categories':
+              return <MenuCategoriesManagementPage restaurantId={restaurantId} />;
             case 'orders':
               return <OrderManagementPage orders={orders} />;
             case 'reports':

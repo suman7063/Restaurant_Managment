@@ -45,7 +45,7 @@ const AddMenuItemModal: React.FC<AddMenuItemModalProps> = ({
         if (response.ok) {
           const result = await response.json();
           if (result.success) {
-            setCategories(result.data || []);
+            setCategories(result.categories || []);
           }
         }
       } catch (error) {
@@ -110,10 +110,9 @@ const AddMenuItemModal: React.FC<AddMenuItemModalProps> = ({
     setSuccess('');
 
     try {
-      // Convert price to cents for storage
+      // No price conversion needed - prices are stored as rupees
       const menuItemData: CreateMenuItemData = {
         ...formData as CreateMenuItemData,
-        price: Math.round(formData.price * 100), // Convert to cents
         restaurant_id: restaurantId
       };
 
@@ -135,7 +134,7 @@ const AddMenuItemModal: React.FC<AddMenuItemModalProps> = ({
     }
   };
 
-  const handleInputChange = (field: keyof CreateMenuItemData, value: any) => {
+  const handleInputChange = (field: keyof CreateMenuItemData, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -143,7 +142,19 @@ const AddMenuItemModal: React.FC<AddMenuItemModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Menu Item">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Add New Menu Item" 
+      maxWidth="xl"
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={isLoading ? "Adding..." : "Add Menu Item"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={isLoading}
+      actionLoading={isLoading}
+      actionVariant="primary"
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Error Message */}
         {error && (
@@ -307,34 +318,7 @@ const AddMenuItemModal: React.FC<AddMenuItemModalProps> = ({
           </label>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex gap-3 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-300"
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Adding...
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Add Menu Item
-              </>
-            )}
-          </button>
-        </div>
+
       </form>
     </Modal>
   );

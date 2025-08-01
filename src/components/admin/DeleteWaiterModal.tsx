@@ -36,6 +36,13 @@ const DeleteWaiterModal: React.FC<DeleteWaiterModalProps> = ({ isOpen, waiter, o
       onClose={onClose}
       title="Delete Waiter"
       disabled={loading}
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={loading ? "Deleting..." : "Delete Waiter"}
+      onAction={handleDelete}
+      actionDisabled={loading}
+      actionLoading={loading}
+      actionVariant="danger"
     >
       <div className="p-6">
           <div className="flex items-center justify-center mb-4">
@@ -78,28 +85,7 @@ const DeleteWaiterModal: React.FC<DeleteWaiterModalProps> = ({ isOpen, waiter, o
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
-                loading
-                  ? 'bg-red-400 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
-              disabled={loading}
-            >
-              {loading ? 'Deleting...' : 'Delete Waiter'}
-            </button>
-          </div>
+
         </div>
     </Modal>
   );

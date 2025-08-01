@@ -64,8 +64,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('available', true);
     }
 
-    const { data, error } = await query.order('restaurant_menu_categories.display_order', { ascending: true })
-                                     .order('name', { ascending: true });
+    const { data, error } = await query.order('name', { ascending: true });
 
     if (error) {
       console.error('Error fetching menu items:', error);

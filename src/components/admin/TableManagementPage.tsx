@@ -3,9 +3,7 @@ import { Plus, Search, Edit, Utensils, RefreshCw, Trash2 } from 'lucide-react';
 import { Table } from '../types';
 import { formatCurrency, getTableStatusColor } from '../utils';
 import { fetchTables } from '../../lib/database';
-import AddTableModal from './AddTableModal';
-import EditTableModal from './EditTableModal';
-import DeleteTableModal from './DeleteTableModal';
+import { AddTableModal, EditTableModal, DeleteTableModal } from './';
 import { Input } from '../ui';
 
 interface TableManagementPageProps {

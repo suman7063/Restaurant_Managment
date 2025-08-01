@@ -126,6 +126,13 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
       onClose={onClose}
       title="Edit Waiter"
       disabled={loading}
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={loading ? "Updating..." : "Update Waiter"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={loading}
+      actionLoading={loading}
+      actionVariant="primary"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Name Field */}
@@ -313,28 +320,7 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
-                loading
-                  ? 'bg-purple-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-400 to-purple-600'
-              }`}
-              disabled={loading}
-            >
-              {loading ? 'Updating...' : 'Update Waiter'}
-            </button>
-          </div>
+
         </form>
     </Modal>
   );

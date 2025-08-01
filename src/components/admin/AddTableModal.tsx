@@ -89,6 +89,13 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
       title="Add New Table"
       disabled={isLoading}
       maxWidth="md"
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={isLoading ? "Creating..." : "Create Table"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={isLoading || !tableNumber.trim()}
+      actionLoading={isLoading}
+      actionVariant="primary"
     >
       <div className="p-6">
         {/* Form */}
@@ -120,34 +127,7 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !tableNumber.trim()}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Create Table
-                </>
-              )}
-            </button>
-          </div>
+
         </form>
       </div>
     </Modal>

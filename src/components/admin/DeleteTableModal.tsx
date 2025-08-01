@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { Table } from '../types';
+import { AlertTriangle, CheckCircle, Trash2 } from 'lucide-react';
 import { Modal } from '../ui';
+import { Table } from '../types';
+import { formatCurrency } from '../utils';
 
 interface DeleteTableModalProps {
   isOpen: boolean;
@@ -75,6 +76,13 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
       title="Archive Table"
       disabled={isLoading}
       maxWidth="md"
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={isLoading ? "Archiving..." : "Archive Table"}
+      onAction={handleDelete}
+      actionDisabled={isLoading}
+      actionLoading={isLoading}
+      actionVariant="secondary"
     >
       <div className="p-6">
         {/* Warning Message */}
@@ -96,7 +104,7 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
             <p><span className="font-medium">Number:</span> {table.table_number}</p>
             <p><span className="font-medium">Status:</span> {table.status}</p>
             <p><span className="font-medium">Guests:</span> {table.guests}</p>
-            <p><span className="font-medium">Revenue:</span> ₹{table.revenue.toFixed(2)}</p>
+            <p><span className="font-medium">Revenue:</span> {formatCurrency(table.revenue)}</p>
             {table.waiter_name && (
               <p><span className="font-medium">Waiter:</span> {table.waiter_name}</p>
             )}
@@ -119,35 +127,7 @@ const DeleteTableModal: React.FC<DeleteTableModalProps> = ({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-4">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Archiving...
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4" />
-                Archive Table
-              </>
-            )}
-          </button>
-        </div>
+
       </div>
     </Modal>
   );

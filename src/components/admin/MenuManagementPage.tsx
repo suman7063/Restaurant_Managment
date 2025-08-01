@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Edit, RefreshCw, Trash2, ChefHat, Timer, Star, Utensils } from 'lucide-react';
+import { Plus, Search, Edit, RefreshCw, Trash2, ChefHat, Timer, Star, Utensils, Tag, Grid, List } from 'lucide-react';
 import { fetchMenuItems } from '../../lib/database';
 import { AddMenuItemModal, EditMenuItemModal, DeleteMenuItemModal } from './';
 import { Input } from '../ui';
-import { MenuItem as MenuItemType } from '../types';
+import { MenuItem as MenuItemType, MenuCategory } from '../types';
 import { formatCurrency } from '../utils';
 
 interface MenuManagementPageProps {
@@ -12,11 +12,13 @@ interface MenuManagementPageProps {
 
 const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId }) => {
   const [menuItems, setMenuItems] = useState<MenuItemType[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -43,21 +45,37 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
     }
   }, [restaurantId]);
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/admin/menu-categories?restaurantId=${restaurantId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Error loading categories:', err);
+    }
+  }, [restaurantId]);
+
   useEffect(() => {
     loadMenuItems();
-  }, [loadMenuItems]);
+    loadCategories();
+  }, [restaurantId, loadMenuItems, loadCategories]);
 
   const handleMenuItemAdded = useCallback(() => {
     loadMenuItems(true);
-  }, [loadMenuItems]);
+    // Categories don't need to be reloaded when adding menu items
+  }, [restaurantId]);
 
   const handleMenuItemUpdated = useCallback(() => {
     loadMenuItems(true);
-  }, [loadMenuItems]);
+    // Categories don't need to be reloaded when updating menu items
+  }, [restaurantId]);
 
   const handleMenuItemDeleted = useCallback(() => {
     loadMenuItems(true);
-  }, [loadMenuItems]);
+    // Categories don't need to be reloaded when deleting menu items
+  }, [restaurantId]);
 
   const handleEditMenuItem = (menuItem: MenuItemType) => {
     setSelectedMenuItem(menuItem);
@@ -69,14 +87,15 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
     setIsDeleteModalOpen(true);
   };
 
-  // Extract unique categories from menu items
-  const categories = Array.from(new Set(menuItems.map(item => item.category?.name || item.category_id))).sort();
+
 
   // Filter menu items based on search and filters
   const filteredMenuItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.category?.name === categoryFilter || item.category_id === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || 
+                           item.category?.id === categoryFilter || 
+                           item.category_id === categoryFilter;
     const matchesAvailability = availabilityFilter === 'all' || 
                                (availabilityFilter === 'available' && item.available) ||
                                (availabilityFilter === 'unavailable' && !item.available);
@@ -108,11 +127,14 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
-          <p className="text-gray-600">Manage your restaurant menu items</p>
+          <p className="text-gray-600">Manage your restaurant menu items and categories</p>
         </div>
         <div className="flex gap-3">
           <button 
-            onClick={() => loadMenuItems(true)}
+            onClick={() => {
+              loadMenuItems(true);
+              // Categories don't need to be refreshed when refreshing menu items
+            }}
             disabled={isRefreshing}
             className="bg-gray-100 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-200 transition-all duration-300 flex items-center gap-2 disabled:opacity-50"
           >
@@ -136,8 +158,10 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
         </div>
       )}
 
+
+
       {/* Search and Filter */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="md:col-span-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -159,7 +183,7 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
           >
             <option value="all">All Categories</option>
             {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category.id} value={category.id}>{category.name}</option>
             ))}
           </select>
         </div>
@@ -175,9 +199,32 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
             <option value="unavailable">Unavailable</option>
           </select>
         </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-3 py-3 rounded-xl transition-all duration-300 ${
+              viewMode === 'grid'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <Grid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-3 rounded-xl transition-all duration-300 ${
+              viewMode === 'list'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <List className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Menu Items Grid */}
+      {/* Menu Items Display */}
       <div className="space-y-6">
         {Object.keys(groupedItems).length === 0 ? (
           <div className="text-center py-12">
@@ -190,97 +237,202 @@ const MenuManagementPage: React.FC<MenuManagementPageProps> = ({ restaurantId })
         ) : (
           Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                {category} ({items.length})
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                  >
-                    {/* Item Image */}
-                    {item.image && (
-                      <div className="mb-4">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-
-                    {/* Item Details */}
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                          {item.name}
-                        </h3>
-                        <span className="text-lg font-bold text-blue-600">
-                          {formatCurrency(item.price)}
-                        </span>
-                      </div>
-
-                      <p className="text-gray-600 text-sm line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Item Stats */}
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Timer className="w-4 h-4" />
-                          <span>{item.prepTime} min</span>
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-blue-600" />
+                  {category} ({items.length})
+                </h2>
+                <div className="text-sm text-gray-500">
+                  {items.filter(item => item.available).length} available
+                </div>
+              </div>
+              
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                      {/* Item Image */}
+                      {item.image && (
+                        <div className="mb-4">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4" />
-                          <span>{item.rating.toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ChefHat className="w-4 h-4" />
-                          <span>{item.cuisine_type}</span>
-                        </div>
-                      </div>
+                      )}
 
-                      {/* Item Tags */}
-                      <div className="flex flex-wrap gap-2">
-                        {item.is_veg && (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                            Vegetarian
+                      {/* Item Details */}
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                            {item.name}
+                          </h3>
+                          <span className="text-lg font-bold text-blue-600">
+                            {formatCurrency(item.price)}
                           </span>
-                        )}
-                        {item.popular && (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                            Popular
-                          </span>
-                        )}
-                        {!item.available && (
-                          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                            Unavailable
-                          </span>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => handleEditMenuItem(item)}
-                          className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-1 text-sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMenuItem(item)}
-                          className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-1 text-sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
+                        <p className="text-gray-600 text-sm line-clamp-2">
+                          {item.description}
+                        </p>
+
+                        {/* Category Badge */}
+                        {item.category && (
+                          <div className="flex items-center gap-2">
+                            <Tag className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm text-blue-600 font-medium">
+                              {item.category.name}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Item Stats */}
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Timer className="w-4 h-4" />
+                            <span>{item.prepTime} min</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            <span>{item.rating.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <ChefHat className="w-4 h-4" />
+                            <span>{item.cuisine_type}</span>
+                          </div>
+                        </div>
+
+                        {/* Item Tags */}
+                        <div className="flex flex-wrap gap-2">
+                          {item.is_veg && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              Vegetarian
+                            </span>
+                          )}
+                          {item.popular && (
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              Popular
+                            </span>
+                          )}
+                          {!item.available && (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                              Unavailable
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-3 border-t border-gray-100">
+                          <button
+                            onClick={() => handleEditMenuItem(item)}
+                            className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-1 text-sm"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMenuItem(item)}
+                            className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-1 text-sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-300"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          {/* Item Image */}
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-16 h-16 object-cover rounded-lg"
+                            />
+                          )}
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                              {item.category && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                  {item.category.name}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-600 text-sm line-clamp-1">{item.description}</p>
+                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                              <span className="flex items-center gap-1">
+                                <Timer className="w-4 h-4" />
+                                {item.prepTime} min
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Star className="w-4 h-4" />
+                                {item.rating.toFixed(1)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <ChefHat className="w-4 h-4" />
+                                {item.cuisine_type}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="font-bold text-blue-600">{formatCurrency(item.price)}</div>
+                            <div className="flex gap-1 mt-1">
+                              {item.is_veg && (
+                                <span className="px-1 py-0.5 bg-green-100 text-green-800 text-xs rounded">
+                                  Veg
+                                </span>
+                              )}
+                              {item.popular && (
+                                <span className="px-1 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">
+                                  Popular
+                                </span>
+                              )}
+                              {!item.available && (
+                                <span className="px-1 py-0.5 bg-red-100 text-red-800 text-xs rounded">
+                                  Unavailable
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditMenuItem(item)}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMenuItem(item)}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, User, Mail, Phone } from 'lucide-react';
-import AddWaiterModal from './AddWaiterModal';
-import EditWaiterModal from './EditWaiterModal';
-import DeleteWaiterModal from './DeleteWaiterModal';
+import { AddWaiterModal, EditWaiterModal, DeleteWaiterModal } from './';
 import SimpleToast from './SimpleToast';
 
 

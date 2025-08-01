@@ -51,7 +51,18 @@ const DeleteMenuItemModal: React.FC<DeleteMenuItemModalProps> = ({
   if (!menuItem) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Delete Menu Item">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Delete Menu Item"
+      showFooter={!success}
+      cancelText="Cancel"
+      actionText={isLoading ? "Deleting..." : "Delete Menu Item"}
+      onAction={handleDelete}
+      actionDisabled={isLoading}
+      actionLoading={isLoading}
+      actionVariant="danger"
+    >
       <div className="space-y-6">
         {/* Error Message */}
         {error && (
@@ -141,35 +152,7 @@ const DeleteMenuItemModal: React.FC<DeleteMenuItemModalProps> = ({
         )}
 
         {/* Form Actions */}
-        {!success && (
-          <div className="flex gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-300"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  Delete Menu Item
-                </>
-              )}
-            </button>
-          </div>
-        )}
+
       </div>
     </Modal>
   );

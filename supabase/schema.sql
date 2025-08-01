@@ -388,6 +388,95 @@ CREATE POLICY "Users can update with admin privileges" ON users
 CREATE POLICY "Menu items are publicly readable within restaurant" ON menu_items
   FOR SELECT USING (deleted_at IS NULL AND restaurant_id IS NOT NULL);
 
+-- Staff can insert menu items within their restaurant
+CREATE POLICY "Staff can insert menu items within restaurant" ON menu_items
+  FOR INSERT WITH CHECK (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = menu_items.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Staff can update menu items within their restaurant
+CREATE POLICY "Staff can update menu items within restaurant" ON menu_items
+  FOR UPDATE USING (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = menu_items.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Staff can delete menu items within their restaurant
+CREATE POLICY "Staff can delete menu items within restaurant" ON menu_items
+  FOR DELETE USING (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = menu_items.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Add RLS policies for restaurant_menu_categories table
+-- Staff can insert menu categories within their restaurant
+CREATE POLICY "Staff can insert menu categories within restaurant" ON restaurant_menu_categories
+  FOR INSERT WITH CHECK (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_menu_categories.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Staff can update menu categories within their restaurant
+CREATE POLICY "Staff can update menu categories within restaurant" ON restaurant_menu_categories
+  FOR UPDATE USING (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_menu_categories.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Staff can delete menu categories within their restaurant
+CREATE POLICY "Staff can delete menu categories within restaurant" ON restaurant_menu_categories
+  FOR DELETE USING (
+    deleted_at IS NULL AND
+    restaurant_id IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.restaurant_id = restaurant_menu_categories.restaurant_id
+      AND users.role IN ('admin', 'owner')
+      AND users.deleted_at IS NULL
+    )
+  );
+
+-- Menu categories are readable within the restaurant context
+CREATE POLICY "Menu categories are publicly readable within restaurant" ON restaurant_menu_categories
+  FOR SELECT USING (deleted_at IS NULL AND restaurant_id IS NOT NULL);
+
 -- RLS POLICIES DISABLED FOR restaurant_tables
 -- Using API-level authorization instead of RLS due to custom auth system
 --

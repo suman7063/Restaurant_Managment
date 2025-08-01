@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, ChefHat, Mail, Phone, Users } from 'lucide-react';
-import AddChefModal from './AddChefModal';
-import EditChefModal from './EditChefModal';
-import DeleteChefModal from './DeleteChefModal';
+import { AddChefModal, EditChefModal, DeleteChefModal } from './';
 import SimpleToast from './SimpleToast';
 
 interface Chef {

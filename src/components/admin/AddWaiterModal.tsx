@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
-import { Input, Modal } from '../ui';
+import { Input, Modal, Select } from '../ui';
 
 interface AddWaiterModalProps {
   isOpen: boolean;
@@ -95,6 +95,13 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
       onClose={onClose}
       title="Add New Waiter"
       disabled={loading}
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={loading ? "Adding..." : "Add Waiter"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={loading}
+      actionLoading={loading}
+      actionVariant="primary"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Name Field */}
@@ -131,28 +138,26 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Password *
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-4 w-4 text-gray-400" />
               </div>
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
-                id="password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                }`}
                 placeholder="Enter password"
                 disabled={loading}
+                error={errors.password}
+                className="pl-10 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center"
                 disabled={loading}
               >
                 {showPassword ? (
@@ -162,33 +167,30 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
                 )}
               </button>
             </div>
-            {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
           </div>
 
           {/* Confirm Password Field */}
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Confirm Password *
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Lock className="h-4 w-4 text-gray-400" />
               </div>
-              <input
+              <Input
                 type={showConfirmPassword ? 'text' : 'password'}
-                id="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                }`}
                 placeholder="Confirm password"
                 disabled={loading}
+                error={errors.confirmPassword}
+                className="pl-10 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center"
                 disabled={loading}
               >
                 {showConfirmPassword ? (
@@ -198,49 +200,21 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
                 )}
               </button>
             </div>
-            {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
           </div>
 
           {/* Preferred Language Field */}
-          <div>
-            <label htmlFor="preferred_language" className="block text-sm font-medium text-gray-700 mb-1">
-              Preferred Language
-            </label>
-            <select
-              id="preferred_language"
-              value={formData.preferred_language}
-              onChange={(e) => handleInputChange('preferred_language', e.target.value)}
-              className="block w-full py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loading}
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी (Hindi)</option>
-              <option value="kn">ಕನ್ನಡ (Kannada)</option>
-            </select>
-          </div>
+          <Select
+            label="Preferred Language"
+            value={formData.preferred_language}
+            onChange={(e) => handleInputChange('preferred_language', e.target.value)}
+            disabled={loading}
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+          </Select>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
-                loading
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-400 to-purple-600'
-              }`}
-              disabled={loading}
-            >
-              {loading ? 'Adding...' : 'Add Waiter'}
-            </button>
-          </div>
+
         </form>
     </Modal>
   );

@@ -162,6 +162,13 @@ const EditTableModal: React.FC<EditTableModalProps> = ({
       title={`Edit Table ${table.table_number}`}
       disabled={isLoading}
       maxWidth="md"
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={isLoading ? "Saving..." : "Save Changes"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={isLoading}
+      actionLoading={isLoading}
+      actionVariant="primary"
     >
       <div className="p-6">
         {/* Form */}
@@ -235,41 +242,16 @@ const EditTableModal: React.FC<EditTableModalProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 disabled:opacity-50"
-            >
-              Cancel
-            </button>
+          {/* Reset Button */}
+          <div className="flex justify-center pt-4">
             <button
               type="button"
               onClick={handleResetTable}
               disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-6 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
-              Reset
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </>
-              )}
+              Reset Table
             </button>
           </div>
         </form>

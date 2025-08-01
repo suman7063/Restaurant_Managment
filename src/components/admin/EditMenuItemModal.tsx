@@ -47,7 +47,7 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
         if (response.ok) {
           const result = await response.json();
           if (result.success) {
-            setCategories(result.data || []);
+            setCategories(result.categories || []);
           }
         }
       } catch (error) {
@@ -63,7 +63,7 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
       setFormData({
         name: menuItem.name,
         description: menuItem.description,
-        price: menuItem.price / 100, // Convert from cents to rupees
+        price: menuItem.price, // No conversion needed - prices are stored as rupees
         category_id: menuItem.category_id,
         prep_time: menuItem.prepTime,
         image: menuItem.image || '',
@@ -113,10 +113,9 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
     setSuccess('');
 
     try {
-      // Convert price to cents for storage
+      // No price conversion needed - prices are stored as rupees
       const updateData: UpdateMenuItemData = {
-        ...formData as UpdateMenuItemData,
-        price: Math.round(formData.price * 100) // Convert to cents
+        ...formData as UpdateMenuItemData
       };
 
       await updateMenuItem(menuItem.id, updateData);
@@ -137,7 +136,7 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
     }
   };
 
-  const handleInputChange = (field: keyof UpdateMenuItemData, value: any) => {
+  const handleInputChange = (field: keyof UpdateMenuItemData, value: string | number | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -149,7 +148,19 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Menu Item">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Edit Menu Item" 
+      maxWidth="xl"
+      showFooter={true}
+      cancelText="Cancel"
+      actionText={isLoading ? "Updating..." : "Update Menu Item"}
+      onAction={() => document.querySelector('form')?.requestSubmit()}
+      actionDisabled={isLoading}
+      actionLoading={isLoading}
+      actionVariant="primary"
+    >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Error Message */}
         {error && (
@@ -191,16 +202,16 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category *
               </label>
-                          <Select
-              value={formData.category_id || ''}
-              onChange={(e) => handleInputChange('category_id', e.target.value)}
-              required
-            >
-              <option value="">Select category</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </Select>
+              <Select
+                value={formData.category_id || ''}
+                onChange={(e) => handleInputChange('category_id', e.target.value)}
+                required
+              >
+                <option value="">Select category</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </Select>
             </div>
           </div>
 
@@ -313,34 +324,7 @@ const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
           </label>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex gap-3 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all duration-300"
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Updating...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Update Menu Item
-              </>
-            )}
-          </button>
-        </div>
+
       </form>
     </Modal>
   );
