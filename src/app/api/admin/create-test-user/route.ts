@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       phone: '1234567890',
       role: role as 'admin' | 'owner' | 'waiter' | 'chef',
       restaurant_id,
-      language: 'en',
+      preferred_language: 'en',
       temporary_password: password
     })
 

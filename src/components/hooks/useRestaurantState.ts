@@ -269,7 +269,6 @@ export const useRestaurantState = (): UseRestaurantStateReturn => {
             email: '',
             phone: '',
             role: 'customer',
-            language: 'en',
             table: table.table_number
           });
           

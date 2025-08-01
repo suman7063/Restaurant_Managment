@@ -1,7 +1,8 @@
 import React from 'react';
-import { ChefHat, Clock, CheckCircle } from 'lucide-react';
+import { ChefHat, Clock, CheckCircle, Globe } from 'lucide-react';
 import { User, Order } from './types';
 import { getOrderStatusColor } from './utils';
+
 
 interface ChefDashboardProps {
   currentUser: User;
@@ -16,6 +17,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
   orders,
   onUpdateOrderStatus
 }) => {
+
   const activeOrdersCount = orders.filter(o => o.status === 'active').length;
   const completedOrdersCount = orders.filter(o => o.status === 'completed').length;
   const cancelledOrdersCount = orders.filter(o => o.status === 'cancelled').length;
@@ -34,6 +36,7 @@ const ChefDashboard: React.FC<ChefDashboardProps> = ({
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            
             <div className="bg-red-100 text-red-800 px-4 py-2 rounded-xl font-medium flex items-center space-x-2">
               <Clock className="w-5 h-5" />
               <span>{activeOrdersCount} Active Orders</span>

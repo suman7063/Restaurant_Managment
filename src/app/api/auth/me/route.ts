@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
         name: result.user.name,
         email: result.user.email,
         role: result.user.role,
-        language: result.user.language,
         restaurant_id: result.user.restaurant_id,
         restaurant_name: result.user.restaurant_name,
         kitchen_station_name: result.user.kitchen_station_name

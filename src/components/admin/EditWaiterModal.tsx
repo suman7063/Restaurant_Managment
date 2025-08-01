@@ -79,7 +79,14 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
 
     setLoading(true);
     try {
-      const updateData: any = {
+      const updateData: {
+        id: string;
+        name?: string;
+        email?: string;
+        phone?: string;
+        is_active?: boolean;
+        password?: string;
+      } = {
         id: waiter.id,
         name: formData.name.trim(),
         email: formData.email.trim(),
@@ -147,6 +154,8 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
             placeholder="Enter phone number"
             disabled={loading}
           />
+
+
 
           {/* Status Field */}
           <div>

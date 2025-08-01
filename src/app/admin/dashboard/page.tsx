@@ -30,7 +30,6 @@ export default function AdminDashboardPage() {
             email: userData.user.email,
             phone: '',
             role: userData.user.role,
-            language: userData.user.language,
             kitchen_station: userData.user.kitchen_station_name,
             table: undefined
           })
@@ -90,7 +89,7 @@ export default function AdminDashboardPage() {
               name: 'Margherita Pizza',
               description: 'Classic tomato and mozzarella',
               price: 12.99,
-              category: 'Pizza',
+              category_id: 'cat-1',
               prepTime: 15,
               rating: 4.5,
               image: '/pizza.jpg',
@@ -128,7 +127,7 @@ export default function AdminDashboardPage() {
               name: 'Chicken Burger',
               description: 'Grilled chicken with fresh vegetables',
               price: 9.99,
-              category: 'Burgers',
+              category_id: 'cat-2',
               prepTime: 10,
               rating: 4.2,
               image: '/burger.jpg',

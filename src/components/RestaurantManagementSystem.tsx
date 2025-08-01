@@ -8,6 +8,7 @@ import WaiterDashboard from './WaiterDashboard';
 import ChefDashboard from './ChefDashboard';
 import AnimatedOnboardingPage from './AnimatedOnboardingPage';
 import LandingPage from './LandingPage';
+
 import NotificationToast from './NotificationToast';
 import { orderService, tableService, userService } from '../lib/database';
 
@@ -103,7 +104,6 @@ const RestaurantManagementSystem = () => {
             email: '',
             phone: '',
             role: 'customer',
-            language: 'en',
             table: table.table_number
           });
           

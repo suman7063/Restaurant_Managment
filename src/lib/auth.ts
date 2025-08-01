@@ -419,7 +419,7 @@ class AuthService {
     phone: string
     role: 'admin' | 'owner' | 'waiter' | 'chef'
     restaurant_id: string
-    language?: string
+    preferred_language?: string
     kitchen_station_id?: string
     temporary_password?: string
   }): Promise<DatabaseUser> {
@@ -429,7 +429,7 @@ class AuthService {
       phone,
       role,
       restaurant_id,
-      language = 'en',
+      preferred_language = 'en',
       kitchen_station_id,
       temporary_password
     } = userData
@@ -446,7 +446,7 @@ class AuthService {
         phone,
         role,
         restaurant_id,
-        language,
+        preferred_language,
         kitchen_station_id,
         password_hash: passwordHash,
         is_active: true

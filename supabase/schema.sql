@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS restaurant_tables CASCADE;
 DROP TABLE IF EXISTS menu_items CASCADE;
+DROP TABLE IF EXISTS restaurant_menu_categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS kitchen_stations CASCADE;
 DROP TABLE IF EXISTS restaurants CASCADE;
@@ -45,7 +46,6 @@ CREATE TABLE restaurants (
   logo_image VARCHAR(255), -- Restaurant logo/branding image
   banner_image VARCHAR(255), -- Restaurant banner/hero image
   cuisine_type VARCHAR(100) DEFAULT 'Indian',
-  languages TEXT[] DEFAULT '{en}',
   subscription_plan VARCHAR(50) DEFAULT 'starter',
   subscription_status VARCHAR(50) DEFAULT 'active',
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -57,11 +57,7 @@ CREATE TABLE restaurants (
 CREATE TABLE kitchen_stations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  name_hi VARCHAR(255),
-  name_kn VARCHAR(255),
   description TEXT,
-  description_hi TEXT,
-  description_kn TEXT,
   cuisine_types TEXT[] DEFAULT '{}', -- Types of cuisine this station handles
   is_active BOOLEAN DEFAULT true,
   restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
@@ -79,12 +75,25 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE,
   phone VARCHAR(20),
   password_hash VARCHAR(255),
-  language VARCHAR(10) DEFAULT 'en' CHECK (language IN ('en', 'hi', 'kn')),
   kitchen_station_id UUID REFERENCES kitchen_stations(id), -- Link to kitchen station
   is_active BOOLEAN DEFAULT true,
   last_login TIMESTAMP WITH TIME ZONE,
   login_attempts INTEGER DEFAULT 0,
   locked_until TIMESTAMP WITH TIME ZONE,
+  preferred_language VARCHAR(10) DEFAULT 'en' CHECK (preferred_language IN ('en', 'hi', 'kn')),
+  deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Restaurant menu categories table
+CREATE TABLE restaurant_menu_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -94,13 +103,9 @@ CREATE TABLE users (
 CREATE TABLE menu_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  name_hi VARCHAR(255),
-  name_kn VARCHAR(255),
   price INTEGER NOT NULL, -- Price in cents
-  category VARCHAR(100) NOT NULL,
+  category_id UUID NOT NULL REFERENCES restaurant_menu_categories(id) ON DELETE CASCADE,
   description TEXT,
-  description_hi TEXT,
-  description_kn TEXT,
   prep_time INTEGER NOT NULL, -- Preparation time in minutes
   rating DECIMAL(3,2) DEFAULT 0,
   image VARCHAR(255),
@@ -173,8 +178,6 @@ CREATE TABLE order_items (
 CREATE TABLE notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   message TEXT NOT NULL,
-  message_hi TEXT,
-  message_kn TEXT,
   type VARCHAR(50) NOT NULL CHECK (type IN ('info', 'success', 'warning', 'error')),
   user_id UUID REFERENCES users(id),
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
@@ -235,6 +238,11 @@ CREATE TRIGGER soft_delete_restaurant_tables
   FOR EACH ROW
   EXECUTE FUNCTION soft_delete_record();
 
+CREATE TRIGGER soft_delete_restaurant_menu_categories
+  BEFORE DELETE ON restaurant_menu_categories
+  FOR EACH ROW
+  EXECUTE FUNCTION soft_delete_record();
+
 CREATE TRIGGER soft_delete_orders
   BEFORE DELETE ON orders
   FOR EACH ROW
@@ -271,7 +279,7 @@ CREATE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_kitchen_station_id ON users(kitchen_station_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_deleted_at ON users(deleted_at);
 
-CREATE INDEX idx_menu_items_category ON menu_items(category) WHERE deleted_at IS NULL;
+CREATE INDEX idx_menu_items_category_id ON menu_items(category_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_menu_items_popular ON menu_items(popular) WHERE deleted_at IS NULL;
 CREATE INDEX idx_menu_items_restaurant_id ON menu_items(restaurant_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_menu_items_kitchen_station_id ON menu_items(kitchen_station_id) WHERE deleted_at IS NULL;
@@ -281,6 +289,11 @@ CREATE INDEX idx_restaurant_tables_qr_code ON restaurant_tables(qr_code) WHERE d
 CREATE INDEX idx_restaurant_tables_status ON restaurant_tables(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_restaurant_tables_restaurant_id ON restaurant_tables(restaurant_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_restaurant_tables_deleted_at ON restaurant_tables(deleted_at);
+
+CREATE INDEX idx_restaurant_menu_categories_restaurant_id ON restaurant_menu_categories(restaurant_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_restaurant_menu_categories_active ON restaurant_menu_categories(is_active) WHERE deleted_at IS NULL;
+CREATE INDEX idx_restaurant_menu_categories_display_order ON restaurant_menu_categories(display_order) WHERE deleted_at IS NULL;
+CREATE INDEX idx_restaurant_menu_categories_deleted_at ON restaurant_menu_categories(deleted_at);
 
 CREATE INDEX idx_orders_customer_id ON orders(customer_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_orders_table_id ON orders(table_id) WHERE deleted_at IS NULL;

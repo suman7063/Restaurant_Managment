@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
-        language: user.language,
         restaurant_id: user.restaurant_id,
         restaurant_name: user.restaurant_name,
         kitchen_station_name: user.kitchen_station_name

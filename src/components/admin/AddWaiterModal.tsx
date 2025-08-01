@@ -198,6 +198,8 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
             {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
           </div>
 
+
+
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4">
             <button

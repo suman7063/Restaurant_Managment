@@ -38,17 +38,14 @@ const AnimatedOnboardingPage: React.FC = () => {
     phone: '',
     email: '',
     cuisine_type: 'Indian',
-    languages: ['en'] as string[],
     subscription_plan: 'starter' as 'starter' | 'professional' | 'enterprise'
   });
 
   // Admin user details
   const [adminData, setAdminData] = useState({
-    name: '',
-    email: '',
-    phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    preferred_language: 'en'
   });
 
   const subscriptionPlans = [
@@ -65,7 +62,7 @@ const AnimatedOnboardingPage: React.FC = () => {
         'QR code ordering',
         'Individual item delivery',
         'Basic analytics',
-        'English + 1 local language',
+        'Basic support',
         'Email support'
       ]
     },
@@ -83,7 +80,7 @@ const AnimatedOnboardingPage: React.FC = () => {
         'Real-time notifications',
         'Individual item delivery with special notes',
         'Detailed analytics and reporting',
-        'English + 2 local languages',
+        'Advanced support',
         'Priority email + chat support'
       ]
     },
@@ -98,7 +95,7 @@ const AnimatedOnboardingPage: React.FC = () => {
         'Unlimited menu items and kitchens',
         'Multi-location support',
         'Advanced analytics with custom reports',
-        'All language options',
+        'Premium support',
         'API access for integrations',
         'Dedicated account manager',
         'Phone + email + chat support'
@@ -106,14 +103,7 @@ const AnimatedOnboardingPage: React.FC = () => {
     }
   ];
 
-  const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
-    { code: 'kn', name: 'Kannada', flag: '🇮🇳' },
-    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
-    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
-    { code: 'ml', name: 'Malayalam', flag: '🇮🇳' }
-  ];
+
 
   const cuisineTypes = [
     'Indian', 'Chinese', 'Italian', 'Mexican', 'Japanese', 
@@ -139,18 +129,7 @@ const AnimatedOnboardingPage: React.FC = () => {
     }
   };
 
-  const handleLanguageToggle = (languageCode: string) => {
-    const newLanguages = restaurantData.languages.includes(languageCode)
-      ? restaurantData.languages.filter(lang => lang !== languageCode)
-      : [...restaurantData.languages, languageCode];
-    
-    // Ensure English is always included
-    if (!newLanguages.includes('en')) {
-      newLanguages.push('en');
-    }
-    
-    handleRestaurantChange('languages', newLanguages);
-  };
+
 
   const validateStep = (step: number): boolean => {
     const errors: Record<string, string> = {};
@@ -166,7 +145,6 @@ const AnimatedOnboardingPage: React.FC = () => {
     }
 
     if (step === 2) {
-      if (!adminData.name.trim()) errors.name = 'Admin name is required';
       if (!adminData.password) errors.password = 'Password is required';
       if (adminData.password && adminData.password.length < 6) {
         errors.password = 'Password must be at least 6 characters';
@@ -203,13 +181,13 @@ const AnimatedOnboardingPage: React.FC = () => {
 
       // 2. Create admin user with proper password hashing
       const admin = await authService.createStaffUser({
-        name: adminData.name,
+        name: 'Admin', // Default admin name
         email: restaurantData.email, // Use restaurant email for admin (as per form design)
         phone: restaurantData.phone, // Use restaurant phone for admin (as per form design)
         role: 'admin',
         restaurant_id: restaurant.id,
-        language: (restaurant.languages[0] || "en") as 'en' | 'hi' | 'kn',
-        temporary_password: adminData.password
+        temporary_password: adminData.password,
+        preferred_language: adminData.preferred_language
       });
       if (!admin) throw new Error("Failed to create admin user.");
 
@@ -395,53 +373,7 @@ const AnimatedOnboardingPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-4">
-                    <label className="block text-sm font-semibold text-gray-800 mb-3">
-                      Languages
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {languages.map((lang) => {
-                        const isSelected = restaurantData.languages.includes(lang.code);
-                        const isEnglish = lang.code === 'en';
-                        
-                        return (
-                          <motion.button
-                            key={lang.code}
-                            type="button"
-                            onClick={() => !isEnglish && handleLanguageToggle(lang.code)}
-                            disabled={isEnglish}
-                            className={`
-                              relative p-3 rounded-lg border-2 transition-all duration-300
-                              ${isSelected 
-                                ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20' 
-                                : 'border-gray-200 bg-white hover:border-gray-300'
-                              }
-                              ${isEnglish ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
-                            `}
-                            whileHover={!isEnglish ? { scale: 1.02, y: -2 } : {}}
-                            whileTap={!isEnglish ? { scale: 0.98 } : {}}
-                          >
-                            <motion.div
-                              animate={{ scale: isSelected ? 1 : 0 }}
-                              className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center"
-                            >
-                              <CheckCircle size={14} className="text-white" />
-                            </motion.div>
-                            <div className="text-center">
-                              <div className="text-2xl mb-1">{lang.flag}</div>
-                              <div className="text-sm font-medium">{lang.name}</div>
-                              {isEnglish && (
-                                <div className="text-xs text-gray-500 mt-1">Required</div>
-                              )}
-                            </div>
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      English is required and will be used as the default language
-                    </p>
-                  </div>
+
                 </motion.div>
               )}
 
@@ -480,33 +412,43 @@ const AnimatedOnboardingPage: React.FC = () => {
                      </p>
                    </div>
 
-                                     <Input
-                    type="text"
-                    label="Admin Full Name *"
-                    value={adminData.name}
-                    onChange={(e) => handleAdminChange('name', e.target.value)}
-                    placeholder="Enter admin's full name"
-                    className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
-                  />
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                         <Input
-                      type="password"
-                      label="Admin Password *"
-                      value={adminData.password}
-                      onChange={(e) => handleAdminChange('password', e.target.value)}
-                      placeholder="Create admin password"
-                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
-                    />
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <Input
+                       type="password"
+                       label="Admin Password *"
+                       value={adminData.password}
+                       onChange={(e) => handleAdminChange('password', e.target.value)}
+                       placeholder="Create admin password"
+                       className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                     />
                      
-                                         <Input
-                      type="password"
-                      label="Confirm Password *"
-                      value={adminData.confirmPassword}
-                      onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
-                      placeholder="Confirm admin password"
-                      className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
-                    />
+                     <Input
+                       type="password"
+                       label="Confirm Password *"
+                       value={adminData.confirmPassword}
+                       onChange={(e) => handleAdminChange('confirmPassword', e.target.value)}
+                       placeholder="Confirm admin password"
+                       className="px-4 py-4 border-2 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                     />
+                   </div>
+
+                   {/* Preferred Language Field */}
+                   <div>
+                     <label htmlFor="preferred_language" className="block text-sm font-semibold text-gray-800 mb-2">
+                       Preferred Language
+                     </label>
+                     <select
+                       id="preferred_language"
+                       value={adminData.preferred_language}
+                       onChange={(e) => handleAdminChange('preferred_language', e.target.value)}
+                       className="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 bg-white shadow-sm hover:shadow-md"
+                     >
+                       <option value="en">English</option>
+                       <option value="hi">हिंदी (Hindi)</option>
+                       <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                     </select>
                    </div>
 
                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">

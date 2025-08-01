@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Users, ShoppingCart, Bell, CheckCircle, Clock, TrendingUp, Coffee } from 'lucide-react';
+import { UserCheck, Users, ShoppingCart, Bell, CheckCircle, Clock, TrendingUp, Coffee, Globe } from 'lucide-react';
 import { User, Order, Table } from './types';
 import { formatCurrency, getOrderStatusColor, getTableStatusColor } from './utils';
+
 
 interface WaiterDashboardProps {
   currentUser: User;
@@ -18,6 +19,7 @@ const WaiterDashboard: React.FC<WaiterDashboardProps> = ({
   tables,
   onUpdateOrderStatus
 }) => {
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -86,6 +88,8 @@ const WaiterDashboard: React.FC<WaiterDashboardProps> = ({
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Removed language selector dropdown */}
+              
               <div className="relative">
                 <div className="bg-green-100 text-green-800 px-4 py-2 rounded-xl font-medium flex items-center space-x-2 hover:bg-green-200 transition-all duration-300 cursor-pointer transform hover:scale-105">
                   <Bell className="w-5 h-5 animate-pulse" />

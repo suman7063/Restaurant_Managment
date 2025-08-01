@@ -1,5 +1,5 @@
 import React from 'react';
-import { Notification, Language } from './types';
+import { Notification, MenuCategory } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Memoized currency formatter for better performance
@@ -357,59 +357,16 @@ export const getOrderStatusColor = (status: string): string => {
 
 
 // Kitchen station utilities
-export const getKitchenStationName = (station: string, language: Language = 'en'): string => {
-  const stationMap: Record<string, Record<Language, string>> = {
-    'Main Kitchen': {
-      en: 'Main Kitchen',
-      hi: 'मुख्य रसोई',
-      kn: 'ಮುಖ್ಯ ಅಡುಗೆಮನೆ'
-    },
-    'Tandoor Station': {
-      en: 'Tandoor Station',
-      hi: 'तंदूर स्टेशन',
-      kn: 'ತಂದೂರ್ ಸ್ಟೇಷನ್'
-    },
-    'Dessert Station': {
-      en: 'Dessert Station',
-      hi: 'मिठाई स्टेशन',
-      kn: 'ಅಡುಗೆ ಸ್ಟೇಷನ್'
-    }
-  };
-  
-  return stationMap[station]?.[language] || stationMap[station]?.en || station;
+export const getKitchenStationName = (station: string): string => {
+  return station;
 };
 
 // Menu category utilities
-export const getCategoryName = (category: string, language: Language = 'en'): string => {
-  const categoryMap: Record<string, Record<Language, string>> = {
-    'Appetizer': {
-      en: 'Appetizer',
-      hi: 'शुरुआती',
-      kn: 'ಆರಂಭಿಕ'
-    },
-    'Main Course': {
-      en: 'Main Course',
-      hi: 'मुख्य पाठ्यक्रम',
-      kn: 'ಮುಖ್ಯ ಕೋರ್ಸ್'
-    },
-    'Dessert': {
-      en: 'Dessert',
-      hi: 'मिठाई',
-      kn: 'ಅಡುಗೆ'
-    },
-    'Beverage': {
-      en: 'Beverage',
-      hi: 'पेय',
-      kn: 'ಪಾನೀಯ'
-    },
-    'Breakfast': {
-      en: 'Breakfast',
-      hi: 'नाश्ता',
-      kn: 'ಅಲ್ಪಾಹಾರ'
-    }
-  };
-  
-  return categoryMap[category]?.[language] || categoryMap[category]?.en || category;
+export const getCategoryName = (category: MenuCategory | string): string => {
+  if (typeof category === 'string') {
+    return category;
+  }
+  return category.name;
 };
 
 // Real-time utilities

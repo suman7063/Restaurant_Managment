@@ -5,7 +5,6 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  language: Language;
   restaurant_id?: string; // UUID
   kitchen_station_id?: string; // UUID
   is_active?: boolean;
@@ -20,18 +19,28 @@ export interface User {
   // Legacy properties for backwards compatibility
   kitchen_station?: string;
   table?: number;
+  preferred_language?: string;
+}
+
+export interface MenuCategory {
+  id: string; // UUID
+  name: string;
+  description?: string;
+  display_order: number;
+  is_active: boolean;
+  restaurant_id: string;
+  created_at?: Date;
+  updated_at?: Date;
+  deleted_at?: Date | null;
 }
 
 export interface MenuItem {
   id: string; // UUID
   name: string;
-  name_hi?: string; // Hindi translation
-  name_kn?: string; // Kannada translation
   description: string;
-  description_hi?: string;
-  description_kn?: string;
   price: number;
-  category: string;
+  category_id: string; // UUID reference to MenuCategory
+  category?: MenuCategory; // Optional joined data
   prepTime: number;
   rating: number;
   image: string;
@@ -47,8 +56,6 @@ export interface MenuItem {
 export interface MenuCustomization {
   id: string; // UUID
   name: string;
-  name_hi?: string;
-  name_kn?: string;
   price_variation: number;
   type: 'size' | 'quantity' | 'preparation';
 }
@@ -57,8 +64,6 @@ export interface MenuAddOn {
   id: string; // UUID
   menu_item_id: string; // UUID
   name: string;
-  name_hi?: string;
-  name_kn?: string;
   price: number;
   available: boolean;
 }
@@ -120,8 +125,6 @@ export interface Table {
 export interface KitchenStation {
   id: string; // UUID
   name: string;
-  name_hi?: string;
-  name_kn?: string;
   cuisine_types: string[];
   assigned_staff: string[];
   is_active: boolean;
@@ -130,8 +133,6 @@ export interface KitchenStation {
 export interface Notification {
   id: string; // UUID
   message: string;
-  message_hi?: string;
-  message_kn?: string;
   type: 'success' | 'error' | 'warning' | 'info';
   user_id?: string; // UUID
   order_id?: string; // UUID
@@ -149,7 +150,6 @@ export interface Restaurant {
   phone: string;
   email: string;
   cuisine_type: string;
-  languages: string[];
   subscription_plan: 'starter' | 'professional' | 'enterprise';
   subscription_status: 'active' | 'inactive' | 'cancelled';
   created_at: Date;
@@ -168,8 +168,6 @@ export interface SubscriptionPlan {
 }
 
 export type UserRole = 'customer' | 'admin' | 'waiter' | 'chef' | 'owner';
-
-export type Language = 'en' | 'hi' | 'kn';
 
 export type ItemStatus = 'order_received' | 'preparing' | 'prepared' | 'delivered';
 

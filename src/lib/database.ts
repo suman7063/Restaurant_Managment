@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Table, MenuItem, Order, User, CartItem, Restaurant } from '../components/types';
+import { Table, MenuItem, Order, User, CartItem, Restaurant, MenuCategory } from '../components/types';
 
 // Export User as DatabaseUser for backwards compatibility
 export type DatabaseUser = User;
@@ -293,6 +293,147 @@ export async function checkTableNumberExists(tableNumber: number, restaurantId: 
   }
 }
 
+// Menu category service for CRUD operations
+export const menuCategoryService = {
+  async getAllCategories(restaurantId: string): Promise<MenuCategory[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, cannot fetch menu categories');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_menu_categories')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('deleted_at', null)
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.error('Supabase error fetching menu categories:', error);
+        return [];
+      }
+
+      return data?.map(category => ({
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        display_order: category.display_order,
+        is_active: category.is_active,
+        restaurant_id: category.restaurant_id,
+        created_at: new Date(category.created_at),
+        updated_at: new Date(category.updated_at),
+        deleted_at: category.deleted_at ? new Date(category.deleted_at) : null
+      })) || [];
+    } catch (error) {
+      console.error('Exception fetching menu categories:', error);
+      return [];
+    }
+  },
+
+  async createCategory(categoryData: Omit<MenuCategory, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>): Promise<MenuCategory | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, cannot create menu category');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_menu_categories')
+        .insert({
+          name: categoryData.name,
+          description: categoryData.description,
+          display_order: categoryData.display_order,
+          is_active: categoryData.is_active,
+          restaurant_id: categoryData.restaurant_id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error creating menu category:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        display_order: data.display_order,
+        is_active: data.is_active,
+        restaurant_id: data.restaurant_id,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        deleted_at: data.deleted_at ? new Date(data.deleted_at) : null
+      };
+    } catch (error) {
+      console.error('Exception creating menu category:', error);
+      return null;
+    }
+  },
+
+  async updateCategory(categoryId: string, updateData: Partial<Omit<MenuCategory, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>>): Promise<MenuCategory | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, cannot update menu category');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_menu_categories')
+        .update({
+          name: updateData.name,
+          description: updateData.description,
+          display_order: updateData.display_order,
+          is_active: updateData.is_active
+        })
+        .eq('id', categoryId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error updating menu category:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        display_order: data.display_order,
+        is_active: data.is_active,
+        restaurant_id: data.restaurant_id,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        deleted_at: data.deleted_at ? new Date(data.deleted_at) : null
+      };
+    } catch (error) {
+      console.error('Exception updating menu category:', error);
+      return null;
+    }
+  },
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, cannot delete menu category');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('restaurant_menu_categories')
+        .delete()
+        .eq('id', categoryId);
+
+      if (error) {
+        console.error('Supabase error deleting menu category:', error);
+      }
+    } catch (error) {
+      console.error('Exception deleting menu category:', error);
+    }
+  }
+};
+
 // Menu service for customer interface
 export const menuService = {
   async getAllMenuItems(): Promise<MenuItem[]> {
@@ -321,13 +462,9 @@ export const menuService = {
       return data.map(item => ({
         id: item.id,
         name: item.name,
-        name_hi: item.name_hi,
-        name_kn: item.name_kn,
         description: item.description || '',
-        description_hi: item.description_hi,
-        description_kn: item.description_kn,
         price: item.price,
-        category: item.category,
+        category_id: item.category_id,
         prepTime: item.prep_time,
         rating: item.rating,
         image: item.image,
@@ -365,13 +502,9 @@ export const menuService = {
       return data.map(item => ({
         id: item.id,
         name: item.name,
-        name_hi: item.name_hi,
-        name_kn: item.name_kn,
         description: item.description || '',
-        description_hi: item.description_hi,
-        description_kn: item.description_kn,
         price: item.price,
-        category: item.category,
+        category_id: item.category_id,
         prepTime: item.prep_time,
         rating: item.rating,
         image: item.image,
@@ -611,7 +744,7 @@ export const userService = {
     }
   },
 
-  async createUser(userData: Omit<User, 'id'> & { password?: string; restaurant_id?: string }): Promise<User | null> {
+  async createUser(userData: Omit<User, 'id'> & { password?: string; restaurant_id?: string; preferred_language?: string }): Promise<User | null> {
     if (!isSupabaseConfigured) {
       console.warn('Supabase not configured, cannot create user');
       return null;
@@ -623,7 +756,6 @@ export const userService = {
         email: userData.email || null,
         phone: userData.phone || null,
         role: userData.role,
-        language: userData.language || 'en',
         kitchen_station_id: userData.kitchen_station || null,
         restaurant_id: userData.restaurant_id || null
       };
@@ -650,7 +782,6 @@ export const userService = {
         email: data.email,
         phone: data.phone,
         role: data.role,
-        language: data.language,
         kitchen_station: data.kitchen_station_id,
         table: userData.table || undefined
       };
@@ -680,7 +811,6 @@ export const restaurantService = {
           phone: restaurantData.phone,
           email: restaurantData.email,
           cuisine_type: restaurantData.cuisine_type,
-          languages: restaurantData.languages,
           subscription_plan: restaurantData.subscription_plan,
           subscription_status: restaurantData.subscription_status
         })
@@ -706,7 +836,6 @@ export const restaurantService = {
         phone: data.phone,
         email: data.email,
         cuisine_type: data.cuisine_type,
-        languages: data.languages,
         subscription_plan: data.subscription_plan,
         subscription_status: data.subscription_status,
         created_at: new Date(data.created_at),
@@ -742,7 +871,6 @@ export const restaurantService = {
         phone: data.phone,
         email: data.email,
         cuisine_type: data.cuisine_type,
-        languages: data.languages,
         subscription_plan: data.subscription_plan,
         subscription_status: data.subscription_status,
         created_at: new Date(data.created_at),
@@ -1025,6 +1153,147 @@ export async function restoreOrderItem(itemId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error in restoreOrderItem:', error);
+    throw error;
+  }
+}
+
+// Menu Item CRUD Operations
+
+export interface CreateMenuItemData {
+  name: string;
+  description: string;
+  price: number;
+  category_id: string;
+  prep_time: number;
+  image?: string;
+  popular?: boolean;
+  available?: boolean;
+  kitchen_station_id?: string;
+  is_veg?: boolean;
+  cuisine_type?: string;
+  customizations?: object[];
+  add_ons?: object[];
+  restaurant_id: string;
+}
+
+export interface UpdateMenuItemData {
+  name?: string;
+  description?: string;
+  price?: number;
+  category_id?: string;
+  prep_time?: number;
+  image?: string;
+  popular?: boolean;
+  available?: boolean;
+  kitchen_station_id?: string;
+  is_veg?: boolean;
+  cuisine_type?: string;
+  customizations?: object[];
+  add_ons?: object[];
+}
+
+// Fetch all menu items for a restaurant
+export async function fetchMenuItems(restaurantId: string): Promise<MenuItem[]> {
+  try {
+    const response = await fetch(`/api/admin/menu-items?restaurantId=${restaurantId}`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch menu items');
+    }
+
+    return result.data || [];
+  } catch (error) {
+    console.error('Error fetching menu items:', error);
+    throw error;
+  }
+}
+
+// Create a new menu item
+export async function createMenuItem(menuItemData: CreateMenuItemData): Promise<MenuItem> {
+  try {
+    const response = await fetch('/api/admin/menu-items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(menuItemData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create menu item');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Error creating menu item:', error);
+    throw error;
+  }
+}
+
+// Update an existing menu item
+export async function updateMenuItem(menuItemId: string, updateData: UpdateMenuItemData): Promise<MenuItem> {
+  try {
+    const response = await fetch(`/api/admin/menu-items/${menuItemId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update menu item');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Error updating menu item:', error);
+    throw error;
+  }
+}
+
+// Delete a menu item (soft delete)
+export async function deleteMenuItem(menuItemId: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/admin/menu-items/${menuItemId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete menu item');
+    }
+  } catch (error) {
+    console.error('Error deleting menu item:', error);
     throw error;
   }
 }

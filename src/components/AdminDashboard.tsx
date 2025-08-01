@@ -23,6 +23,7 @@ import {
   SettingsPage
 } from './admin';
 
+
 interface AdminDashboardProps {
   currentUser: User;
   setCurrentUser: (user: User | null) => void;
@@ -170,7 +171,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             case 'chefs':
               return <ChefManagementPage restaurantId={restaurantId} />;
             case 'menu':
-              return <MenuManagementPage />;
+              return <MenuManagementPage restaurantId={restaurantId} />;
             case 'orders':
               return <OrderManagementPage orders={orders} />;
             case 'reports':
@@ -187,8 +188,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Enhanced Header */}
-      <div className="bg-white/90 backdrop-blur-md shadow-lg border-b border-blue-100 sticky top-0 z-10">
+        {/* Enhanced Header */}
+        <div className="bg-white/90 backdrop-blur-md shadow-lg border-b border-blue-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
@@ -291,7 +292,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           transform: scale(1.02);
         }
       `}</style>
-    </div>
+      </div>
   );
 };
 

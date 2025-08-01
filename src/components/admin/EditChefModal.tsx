@@ -187,6 +187,8 @@ const EditChefModal: React.FC<EditChefModalProps> = ({ isOpen, chef, restaurantI
             disabled={loading}
           />
 
+
+
           {/* Kitchen Station Field */}
           <div>
             <Select

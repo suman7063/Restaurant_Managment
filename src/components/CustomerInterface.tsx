@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, MenuItem, CartItem, MenuCustomization, MenuAddOn } from './types';
-import { useLanguage } from './LanguageContext';
+
 import { 
   formatCurrency, 
   calculateOrderTotal, 
@@ -47,7 +47,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
   onClose, 
   onAdd 
 }) => {
-  const { getTranslation, getLocalizedName, language } = useLanguage();
+
   const [selectedCustomization, setSelectedCustomization] = useState<MenuCustomization | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<MenuAddOn[]>([]);
   const [specialNotes, setSpecialNotes] = useState('');
@@ -93,7 +93,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
+      title={item.name}
       maxWidth="md"
     >
       <div className="p-6">
@@ -101,7 +101,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
           {/* Quantity Selector */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {getTranslation('quantity')}
+              Quantity
             </label>
             <div className="flex items-center space-x-3">
               <button
@@ -124,7 +124,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
           {item.customizations && item.customizations.length > 0 && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {getTranslation('customizations')}
+                Customizations
               </label>
               <div className="space-y-2">
                 {item.customizations.map((customization) => (
@@ -138,7 +138,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
                       className="text-blue-600"
                     />
                     <span className="text-sm">
-                      {getLocalizedName({ name: customization.name, name_hi: customization.name_hi || '', name_kn: customization.name_kn || '' })} 
+                      {customization.name} 
                       {customization.price_variation > 0 && (
                         <span className="text-green-600 ml-1">
                           (+{formatCurrency(customization.price_variation)})
@@ -155,7 +155,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
           {item.add_ons && item.add_ons.length > 0 && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {getTranslation('addOns')}
+                Add-ons
               </label>
               <div className="space-y-2">
                 {item.add_ons.map((addOn) => (
@@ -167,7 +167,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
                       className="text-blue-600"
                     />
                     <span className="text-sm">
-                      {getLocalizedName({ name: addOn.name, name_hi: addOn.name_hi || '', name_kn: addOn.name_kn || '' })} 
+                      {addOn.name} 
                       <span className="text-green-600 ml-1">
                         (+{formatCurrency(addOn.price)})
                       </span>
@@ -181,12 +181,12 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
           {/* Special Notes */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {getTranslation('specialNotes')}
+              Special Notes
             </label>
             <textarea
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
-              placeholder={getTranslation('specialNotesPlaceholder')}
+              placeholder="Any special requests or notes..."
               className="w-full p-3 border border-gray-300 rounded-lg resize-none"
               rows={3}
               maxLength={200}
@@ -198,7 +198,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
 
           {/* Total Price */}
           <div className="flex justify-between items-center mb-6">
-            <span className="text-lg font-semibold">{getTranslation('total')}:</span>
+            <span className="text-lg font-semibold">Total:</span>
             <span className="text-xl font-bold text-green-600">
               {formatCurrency(calculateItemPrice)}
             </span>
@@ -209,7 +209,7 @@ const CustomizationModal: React.FC<CustomizationModalProps> = React.memo(({
             onClick={handleAdd}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
-            {getTranslation('addToCart')}
+            Add to Cart
           </button>
         </div>
     </Modal>
@@ -230,7 +230,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
   onUpdateQuantity,
   onPlaceOrder
 }) => {
-  const { getTranslation, getLocalizedName } = useLanguage();
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -246,7 +246,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
 
   // Memoized categories
   const categories = useMemo(() => {
-    const cats = ['all', ...new Set(menuItems.map(item => item.category))];
+    const cats = ['all', ...new Set(menuItems.map(item => item.category?.name || item.category_id))];
     return cats.sort();
   }, [menuItems]);
 
@@ -279,7 +279,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(item => item.category === selectedCategory);
+      filtered = filtered.filter(item => item.category?.name === selectedCategory || item.category_id === selectedCategory);
     }
 
     // Filter by search term
@@ -335,7 +335,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
     cart.map(item => (
       <div key={item.id} className="flex items-center justify-between p-3 border-b border-gray-200">
         <div className="flex-1">
-          <h4 className="font-semibold">{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}</h4>
+                          <h4 className="font-semibold">{item.name}</h4>
           <p className="text-sm text-gray-600">
             {formatCurrency(item.price)} x {item.quantity}
           </p>
@@ -359,7 +359,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
           </button>
         </div>
       </div>
-    )), [cart, getLocalizedName, onUpdateQuantity]
+    )), [cart, onUpdateQuantity]
   );
 
   return (
@@ -370,7 +370,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">
-                {getTranslation('restaurantName')}
+                Restaurant Name
               </h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <UserIcon size={16} />
@@ -381,7 +381,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
               onClick={handleLogout}
               className="text-gray-600 hover:text-gray-800"
             >
-              {getTranslation('logout')}
+              Logout
             </button>
           </div>
         </div>
@@ -399,7 +399,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" size={20} />
                     <Input
                       type="text"
-                      placeholder={getTranslation('searchMenu')}
+                      placeholder="Search menu items..."
                       onChange={(e) => debouncedSearch(e.target.value)}
                       className="pl-10 pr-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -413,7 +413,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                   >
                     {categories.map(category => (
                       <option key={category} value={category}>
-                        {getTranslation(category)}
+                        {category}
                       </option>
                     ))}
                   </select>
@@ -426,10 +426,10 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                     }}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="name-asc">{getTranslation('sortByName')}</option>
-                    <option value="price-asc">{getTranslation('sortByPriceLow')}</option>
-                    <option value="price-desc">{getTranslation('sortByPriceHigh')}</option>
-                    <option value="rating-desc">{getTranslation('sortByRating')}</option>
+                    <option value="name-asc">Sort by Name</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="rating-desc">Sort by Rating</option>
                   </select>
                 </div>
               </div>
@@ -443,7 +443,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                     {item.image && (
                       <img
                         src={item.image}
-                        alt={getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}
+                        alt={item.name}
                         className="w-full h-48 object-cover"
                         loading="lazy"
                       />
@@ -451,13 +451,13 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                   </div>
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg">{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })}</h3>
+                      <h3 className="font-semibold text-lg">{item.name}</h3>
                       <span className="text-lg font-bold text-green-600">
                         {formatCurrency(item.price)}
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {getLocalizedName({ name: item.description, name_hi: item.description_hi || '', name_kn: item.description_kn || '' })}
+                      {item.description}
                     </p>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
@@ -472,7 +472,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                         onClick={() => handleAddToCart(item)}
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        {getTranslation('add')}
+                        Add
                       </button>
                     </div>
                   </div>
@@ -482,7 +482,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
 
             {filteredItems.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-gray-500">{getTranslation('noItemsFound')}</p>
+                <p className="text-gray-500">No items found</p>
               </div>
             )}
           </div>
@@ -492,7 +492,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
             <div className="bg-white rounded-lg shadow-sm sticky top-8">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">{getTranslation('yourOrder')}</h2>
+                  <h2 className="text-xl font-semibold">Your Order</h2>
                   <div className="flex items-center space-x-2">
                     <ShoppingCart size={20} />
                     <span className="text-sm text-gray-600">({cartItemCount})</span>
@@ -506,7 +506,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
 
               <div className="p-6 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-semibold">{getTranslation('total')}:</span>
+                  <span className="text-lg font-semibold">Total:</span>
                   <span className="text-xl font-bold text-green-600">
                     {formatCurrency(cartTotal)}
                   </span>
@@ -517,7 +517,7 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                   disabled={cart.length === 0 || loading}
                   className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? getTranslation('processing') : getTranslation('placeOrder')}
+                  {loading ? 'Processing...' : 'Place Order'}
                 </button>
               </div>
             </div>
@@ -543,21 +543,21 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
         <Modal
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
-          title={getTranslation('confirmOrder')}
+          title="Confirm Order"
           maxWidth="md"
         >
           <div className="p-6">
               <div className="space-y-2 mb-6">
                 {cart.map(item => (
                   <div key={item.id} className="flex justify-between">
-                    <span>{getLocalizedName({ name: item.name, name_hi: item.name_hi || '', name_kn: item.name_kn || '' })} x {item.quantity}</span>
+                    <span>{item.name} x {item.quantity}</span>
                     <span>{formatCurrency(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
               <div className="border-t pt-4 mb-6">
                 <div className="flex justify-between font-semibold">
-                  <span>{getTranslation('total')}:</span>
+                  <span>Total:</span>
                   <span>{formatCurrency(cartTotal)}</span>
                 </div>
               </div>
@@ -566,14 +566,14 @@ const CustomerInterface: React.FC<CustomerInterfaceProps> = React.memo(({
                   onClick={() => setShowCheckout(false)}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
                 >
-                  {getTranslation('cancel')}
+                  Cancel
                 </button>
                 <button
                   onClick={handlePlaceOrder}
                   disabled={loading}
                   className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? getTranslation('processing') : getTranslation('confirm')}
+                  {loading ? 'Processing...' : 'Confirm'}
                 </button>
               </div>
             </div>
