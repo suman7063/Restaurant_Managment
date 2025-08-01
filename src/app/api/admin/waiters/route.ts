@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         email,
         phone,
         is_active,
+        preferred_language,
         created_at,
         updated_at,
         assigned_tables:restaurant_tables(
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
       email: waiter.email,
       phone: waiter.phone,
       is_active: waiter.is_active,
+      preferred_language: waiter.preferred_language,
       tableCount: waiter.assigned_tables?.length || 0,
       assignedTables: waiter.assigned_tables || [],
       created_at: waiter.created_at,
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, phone, password, restaurant_id } = body;
+    const { name, email, phone, password, restaurant_id, preferred_language } = body;
 
     // Validate required fields
     if (!name || !email || !password || !restaurant_id) {
@@ -146,6 +148,7 @@ export async function POST(request: NextRequest) {
         password_hash,
         role: 'waiter',
         restaurant_id,
+        preferred_language: preferred_language || 'en',
         is_active: true
       }])
       .select(`

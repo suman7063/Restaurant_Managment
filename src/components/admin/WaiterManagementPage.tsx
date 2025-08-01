@@ -18,6 +18,7 @@ interface Waiter {
   email: string;
   phone?: string;
   is_active: boolean;
+  preferred_language?: string;
   tableCount: number;
   assignedTables: AssignedTable[];
   created_at: string;
@@ -32,6 +33,7 @@ interface WaiterFormData {
   is_active?: boolean;
   id?: string;
   password?: string;
+  preferred_language?: string;
 }
 
 interface WaiterManagementPageProps {

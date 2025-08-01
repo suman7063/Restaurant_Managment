@@ -11,6 +11,7 @@ interface Chef {
   email: string;
   phone?: string;
   is_active: boolean;
+  preferred_language?: string;
   kitchen_station?: {
     id: string;
     name: string;
@@ -32,6 +33,7 @@ interface ChefFormData {
   specialty?: string;
   id?: string;
   password?: string;
+  preferred_language?: string;
 }
 
 interface ChefManagementPageProps {

@@ -8,6 +8,7 @@ interface Chef {
   email: string;
   phone?: string;
   is_active: boolean;
+  preferred_language?: string;
   kitchen_station?: {
     id: string;
     name: string;
@@ -36,6 +37,7 @@ interface EditChefModalProps {
     is_active?: boolean;
     kitchen_station_id?: string;
     password?: string;
+    preferred_language?: string;
   }) => Promise<void>;
 }
 
@@ -47,7 +49,8 @@ const EditChefModal: React.FC<EditChefModalProps> = ({ isOpen, chef, restaurantI
     is_active: chef.is_active,
     kitchen_station_id: chef.kitchen_station?.id || '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    preferred_language: chef.preferred_language || 'en'
   });
   const [kitchenStations, setKitchenStations] = useState<KitchenStation[]>([]);
   const [showPassword, setShowPassword] = useState(false);
@@ -123,7 +126,8 @@ const EditChefModal: React.FC<EditChefModalProps> = ({ isOpen, chef, restaurantI
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
         is_active: formData.is_active,
-        kitchen_station_id: formData.kitchen_station_id || null
+        kitchen_station_id: formData.kitchen_station_id || null,
+        preferred_language: formData.preferred_language
       };
 
       if (changePassword && formData.password) {
@@ -238,6 +242,24 @@ const EditChefModal: React.FC<EditChefModalProps> = ({ isOpen, chef, restaurantI
                 <span className="text-sm text-red-700">Inactive</span>
               </label>
             </div>
+          </div>
+
+          {/* Preferred Language Field */}
+          <div>
+            <label htmlFor="preferred_language" className="block text-sm font-medium text-gray-700 mb-1">
+              Preferred Language
+            </label>
+            <select
+              id="preferred_language"
+              value={formData.preferred_language}
+              onChange={(e) => handleInputChange('preferred_language', e.target.value)}
+              className="block w-full py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              disabled={loading}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            </select>
           </div>
 
           {/* Change Password Section */}

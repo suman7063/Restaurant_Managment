@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         email,
         phone,
         is_active,
+        preferred_language,
         created_at,
         updated_at,
         kitchen_station:kitchen_stations(
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
         email: chef.email,
         phone: chef.phone,
         is_active: chef.is_active,
+        preferred_language: chef.preferred_language,
         kitchen_station: kitchenStation,
         kitchen_station_name: kitchenStation?.name || 'Unassigned',
         specialty: kitchenStation?.cuisine_types?.join(', ') || 'General',
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, phone, password, kitchen_station_id, restaurant_id } = body;
+    const { name, email, phone, password, kitchen_station_id, restaurant_id, preferred_language } = body;
 
     // Validate required fields
     if (!name || !email || !password || !restaurant_id) {
@@ -170,6 +172,7 @@ export async function POST(request: NextRequest) {
         role: 'chef',
         restaurant_id,
         kitchen_station_id: kitchen_station_id || null,
+        preferred_language: preferred_language || 'en',
         is_active: true
       }])
       .select(`

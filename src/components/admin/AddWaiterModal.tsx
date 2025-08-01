@@ -10,6 +10,7 @@ interface AddWaiterModalProps {
     email: string;
     phone?: string;
     password: string;
+    preferred_language?: string;
   }) => Promise<void>;
 }
 
@@ -19,7 +20,8 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    preferred_language: 'en'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -68,7 +70,8 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
-        password: formData.password
+        password: formData.password,
+        preferred_language: formData.preferred_language
       });
     } catch {
       // Error handling is done in the parent component
@@ -198,7 +201,23 @@ const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ isOpen, onClose, onAdd 
             {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
           </div>
 
-
+          {/* Preferred Language Field */}
+          <div>
+            <label htmlFor="preferred_language" className="block text-sm font-medium text-gray-700 mb-1">
+              Preferred Language
+            </label>
+            <select
+              id="preferred_language"
+              value={formData.preferred_language}
+              onChange={(e) => handleInputChange('preferred_language', e.target.value)}
+              className="block w-full py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            </select>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4">

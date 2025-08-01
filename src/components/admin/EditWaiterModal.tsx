@@ -8,6 +8,7 @@ interface Waiter {
   email: string;
   phone?: string;
   is_active: boolean;
+  preferred_language?: string;
 }
 
 interface EditWaiterModalProps {
@@ -21,6 +22,7 @@ interface EditWaiterModalProps {
     phone?: string;
     is_active?: boolean;
     password?: string;
+    preferred_language?: string;
   }) => Promise<void>;
 }
 
@@ -31,7 +33,8 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
     phone: waiter.phone || '',
     is_active: waiter.is_active,
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    preferred_language: waiter.preferred_language || 'en'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -86,12 +89,14 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
         phone?: string;
         is_active?: boolean;
         password?: string;
+        preferred_language?: string;
       } = {
         id: waiter.id,
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        preferred_language: formData.preferred_language
       };
 
       if (changePassword && formData.password) {
@@ -186,6 +191,24 @@ const EditWaiterModal: React.FC<EditWaiterModalProps> = ({ isOpen, waiter, onClo
                 <span className="text-sm text-red-700">Inactive</span>
               </label>
             </div>
+          </div>
+
+          {/* Preferred Language Field */}
+          <div>
+            <label htmlFor="preferred_language" className="block text-sm font-medium text-gray-700 mb-1">
+              Preferred Language
+            </label>
+            <select
+              id="preferred_language"
+              value={formData.preferred_language}
+              onChange={(e) => handleInputChange('preferred_language', e.target.value)}
+              className="block w-full py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            </select>
           </div>
 
           {/* Change Password Section */}
