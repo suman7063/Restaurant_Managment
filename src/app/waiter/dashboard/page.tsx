@@ -1,11 +1,15 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import WaiterDashboard from '../../../components/WaiterDashboard'
+import { User, Order, Table } from '../../../components/types'
 
 export default function WaiterDashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [tables, setTables] = useState<Table[]>([])
 
   useEffect(() => {
     // Check authentication
@@ -34,6 +38,113 @@ export default function WaiterDashboardPage() {
     checkAuth()
   }, [router])
 
+  useEffect(() => {
+    if (user) {
+      loadData()
+    }
+  }, [user])
+
+  const loadData = async () => {
+    try {
+      // Load mock data for development
+      const mockOrders: Order[] = [
+        {
+          id: 'order-1',
+          table: 1,
+          customer_name: 'John Doe',
+          customer_phone: '+1234567890',
+          items: [
+            {
+              id: 'item-1',
+              order_id: 'order-1',
+              menu_item: {
+                id: 'menu-1',
+                name: 'Margherita Pizza',
+                price: 15.99,
+                description: 'Classic tomato and mozzarella',
+                category_id: 'cat-1',
+                prepTime: 20,
+                rating: 4.5,
+                image: '/pizza.jpg',
+                available: true,
+                kitchen_stations: ['pizza-station'],
+                is_veg: true,
+                cuisine_type: 'Italian'
+              },
+              quantity: 2,
+              special_notes: 'Extra cheese please',
+              status: 'order_received',
+              kitchen_station: 'pizza-station',
+              price_at_time: 15.99
+            }
+          ],
+          status: 'active',
+          timestamp: new Date(),
+          total: 31.98,
+          estimated_time: 25,
+          is_joined_order: false,
+          is_session_order: true,
+          session_id: 'session-1',
+          customer_id: 'customer-1',
+          waiter_name: user?.name
+        }
+      ]
+
+      const mockTables: Table[] = [
+        {
+          id: 'table-1',
+          table_number: 1,
+          status: 'occupied',
+          waiter_name: user?.name,
+          guests: 4,
+          revenue: 45.50,
+          qr_code: 'table-1-qr',
+          current_orders: [],
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+        {
+          id: 'table-2',
+          table_number: 2,
+          status: 'available',
+          waiter_name: user?.name,
+          guests: 0,
+          revenue: 0,
+          qr_code: 'table-2-qr',
+          current_orders: [],
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ]
+
+      setOrders(mockOrders)
+      setTables(mockTables)
+    } catch (error) {
+      console.error('Error loading data:', error)
+    }
+  }
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (response.ok) {
+        // Update local state
+        setOrders(prev => prev.map(order => 
+          order.id === orderId ? { ...order, status: newStatus as any } : order
+        ))
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -42,131 +153,17 @@ export default function WaiterDashboardPage() {
     )
   }
 
+  if (!user) {
+    return null
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Waiter Dashboard
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                Welcome, {user?.name || 'Waiter'}
-              </span>
-              <button
-                onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST' })
-                  router.push('/auth/login')
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Tables */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                      <span className="text-white font-bold">T</span>
-                    </div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Table Management
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Manage Tables
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Orders */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                      <span className="text-white font-bold">O</span>
-                    </div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Order Management
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Process Orders
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer Service */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                      <span className="text-white font-bold">C</span>
-                    </div>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Customer Service
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        Serve Customers
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  Waiter Features Coming Soon
-                </h3>
-                <div className="mt-2 max-w-xl text-sm text-gray-500">
-                  <p>
-                    This is the Waiter Dashboard. Table and order management features will be implemented here.
-                  </p>
-                </div>
-                <div className="mt-5">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Authenticated as Waiter
-                  </span>
-                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Restaurant: {user?.restaurant_name || 'Test Restaurant'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <WaiterDashboard
+      currentUser={user}
+      setCurrentUser={setUser}
+      orders={orders}
+      tables={tables}
+      onUpdateOrderStatus={handleUpdateOrderStatus}
+    />
   )
 }

@@ -21,7 +21,8 @@ import {
   MenuCategoriesManagementPage,
   OrderManagementPage,
   ReportsPage,
-  SettingsPage
+  SettingsPage,
+  SessionManagementPage
 } from './admin';
 
 
@@ -33,7 +34,7 @@ interface AdminDashboardProps {
   restaurantId: string;
 }
 
-type AdminPage = 'home' | 'tables' | 'waiters' | 'chefs' | 'menu' | 'menu-categories' | 'orders' | 'reports' | 'settings';
+type AdminPage = 'home' | 'tables' | 'waiters' | 'chefs' | 'menu' | 'menu-categories' | 'orders' | 'reports' | 'settings' | 'sessions';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
@@ -141,6 +142,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       color: 'from-indigo-500 to-indigo-600'
     },
     { 
+      id: 'sessions', 
+      label: 'Session Management', 
+      icon: Users,
+      description: 'OTP-based group ordering',
+      color: 'from-cyan-500 to-cyan-600'
+    },
+    { 
       id: 'reports', 
       label: 'Reports & Analytics', 
       icon: BarChart3,
@@ -184,6 +192,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               return <MenuCategoriesManagementPage restaurantId={restaurantId} />;
             case 'orders':
               return <OrderManagementPage orders={orders} />;
+            case 'sessions':
+              return <SessionManagementPage restaurantId={restaurantId} />;
             case 'reports':
               return <ReportsPage orders={orders} tables={dynamicTables} />;
             case 'settings':

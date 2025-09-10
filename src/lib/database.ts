@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Table, MenuItem, Order, User, CartItem, Restaurant, MenuCategory } from '../components/types';
+import { Table, MenuItem, Order, User, CartItem, Restaurant, MenuCategory, Session, SessionCustomer } from '../components/types';
 
 // Export User as DatabaseUser for backwards compatibility
 export type DatabaseUser = User;
@@ -448,7 +448,7 @@ export const menuService = {
         .select('*')
         .eq('available', true)
         .is('deleted_at', null) // Only fetch non-deleted menu items
-        .order('category', { ascending: true });
+        .order('category_id', { ascending: true });
 
       if (error) {
         console.error('Error fetching menu items:', error);
@@ -574,7 +574,10 @@ export const orderService = {
             status: item.status as string,
             kitchen_station: item.kitchen_station_id as string,
             price_at_time: item.price_at_time as number,
-            selected_add_ons: (item.selected_add_ons as unknown[]) || []
+            selected_add_ons: (item.selected_add_ons as unknown[]) || [],
+            customer_id: item.customer_id as string,
+            customer_name: item.customer_name as string,
+            customer_phone: item.customer_phone as string
           };
         }),
         status: order.status,
@@ -584,7 +587,12 @@ export const orderService = {
         total: order.total,
         estimated_time: order.estimated_time || 0,
         is_joined_order: order.is_joined_order || false,
-        parent_order_id: order.parent_order_id
+        parent_order_id: order.parent_order_id,
+        session_id: order.session_id,
+        session_otp: order.session_otp,
+        customer_id: order.customer_id,
+        restaurant_id: order.restaurant_id,
+        is_session_order: order.is_session_order || false
       }));
     } catch (error) {
       console.error('Exception fetching orders:', error);
@@ -597,6 +605,9 @@ export const orderService = {
     customerName: string;
     items: CartItem[];
     waiterId?: string;
+    sessionId?: string;
+    customerId?: string;
+    restaurantId?: string;
   }): Promise<Order | null> {
     if (!isSupabaseConfigured) {
       console.warn('Supabase not configured, cannot create order');
@@ -604,16 +615,83 @@ export const orderService = {
     }
 
     try {
+      // Session validation if sessionId is provided
+      if (orderData.sessionId) {
+        const session = await sessionService.getSessionById(orderData.sessionId);
+        if (!session || session.status !== 'active') {
+          console.error('Session not found or not active');
+          return null;
+        }
+      }
+
+      // Get table_id from table_number
+      console.log('Looking for table with number:', orderData.tableNumber);
+      const { data: tableData, error: tableError } = await supabase
+        .from('restaurant_tables')
+        .select('id, restaurant_id')
+        .eq('table_number', orderData.tableNumber)
+        .is('deleted_at', null)
+        .single();
+
+      if (tableError || !tableData) {
+        console.error('Table not found:', tableError, 'Table number:', orderData.tableNumber);
+        return null;
+      }
+      console.log('Found table:', tableData);
+
+      // Get or create customer user
+      let customerId = orderData.customerId;
+      if (!customerId) {
+        console.log('Looking for existing customer:', orderData.customerName);
+        // Try to find existing customer by name
+        const { data: existingCustomer } = await supabase
+          .from('users')
+          .select('id')
+          .eq('name', orderData.customerName)
+          .eq('role', 'customer')
+          .eq('restaurant_id', tableData.restaurant_id)
+          .is('deleted_at', null)
+          .single();
+
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+          console.log('Found existing customer:', customerId);
+        } else {
+          console.log('Creating new customer:', orderData.customerName);
+          // Create new customer user
+          const { data: newCustomer, error: customerError } = await supabase
+            .from('users')
+            .insert({
+              name: orderData.customerName,
+              role: 'customer',
+              restaurant_id: tableData.restaurant_id,
+              phone: orderData.customerName // Using name as phone for now
+            })
+            .select('id')
+            .single();
+
+          if (customerError || !newCustomer) {
+            console.error('Failed to create customer:', customerError);
+            return null;
+          }
+          customerId = newCustomer.id;
+          console.log('Created new customer:', customerId);
+        }
+      }
+
       const total = orderData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const estimatedTime = Math.max(...orderData.items.map(item => item.prepTime));
 
-      // Create order
+      // Create order with proper UUID fields
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          table_number: orderData.tableNumber,
-          customer_name: orderData.customerName,
+          table_id: tableData.id,
+          customer_id: customerId,
           waiter_id: orderData.waiterId,
+          session_id: orderData.sessionId,
+          restaurant_id: tableData.restaurant_id,
+          is_joined_order: !!orderData.sessionId,
           total,
           estimated_time: estimatedTime
         })
@@ -627,7 +705,9 @@ export const orderService = {
         order_id: order.id,
         menu_item_id: item.id,
         quantity: item.quantity,
-        price_at_time: item.price
+        price_at_time: item.price,
+        special_notes: item.special_notes || '',
+        selected_add_ons: item.selected_add_ons || []
       }));
 
       const { error: itemsError } = await supabase
@@ -636,10 +716,15 @@ export const orderService = {
 
       if (itemsError) return null;
 
+      // Update session total if this is a session order
+      if (orderData.sessionId) {
+        await sessionService.updateSessionTotal(orderData.sessionId);
+      }
+
       return {
         id: order.id,
-        table: order.table_number,
-        customer_name: order.customer_name,
+        table: orderData.tableNumber, // Use the original table number
+        customer_name: orderData.customerName,
         customer_phone: orderData.customerName,
         items: orderData.items.map((item, index) => ({
           id: `temp_${index + 1}`,
@@ -658,10 +743,552 @@ export const orderService = {
         total,
         estimated_time: estimatedTime,
         is_joined_order: false,
-        parent_order_id: undefined
+        parent_order_id: undefined,
+        session_id: order.session_id,
+        session_otp: order.session_otp,
+        customer_id: order.customer_id,
+        restaurant_id: order.restaurant_id,
+        is_session_order: order.is_joined_order
       };
     } catch (error) {
       console.error('Exception creating order:', error);
+      return null;
+    }
+  },
+
+  // Session-related methods
+  async getSessionOrders(sessionId: string): Promise<Order[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning empty array');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .eq('session_id', sessionId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map(order => ({
+        id: order.id,
+        table: order.table_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.order_items.map((item: Record<string, unknown>) => {
+          const menuItem = item.menu_items as Record<string, unknown>;
+          return {
+            id: item.id as string,
+            order_id: item.order_id as string,
+            menu_item: {
+              id: menuItem.id as string,
+              name: menuItem.name as string,
+              price: item.price_at_time as number,
+              category: menuItem.category as string,
+              prepTime: menuItem.prep_time as number,
+              rating: menuItem.rating as number,
+              image: menuItem.image as string,
+              available: menuItem.available as boolean,
+              kitchen_stations: (menuItem.kitchen_stations as string[]) || [],
+              is_veg: menuItem.is_veg as boolean,
+              cuisine_type: menuItem.cuisine_type as string,
+              description: (menuItem.description as string) || ''
+            },
+            quantity: item.quantity as number,
+            status: item.status as string,
+            kitchen_station: item.kitchen_station_id as string,
+            price_at_time: item.price_at_time as number,
+            selected_add_ons: (item.selected_add_ons as unknown[]) || [],
+            customer_id: item.customer_id as string,
+            customer_name: item.customer_name as string,
+            customer_phone: item.customer_phone as string
+          };
+        }),
+        status: order.status,
+        waiter_id: order.waiter_id,
+        waiter_name: order.waiter_name,
+        timestamp: new Date(order.created_at),
+        total: order.total,
+        estimated_time: order.estimated_time || 0,
+        is_joined_order: order.is_joined_order || false,
+        parent_order_id: order.parent_order_id,
+        session_id: order.session_id,
+        session_otp: order.session_otp,
+        customer_id: order.customer_id,
+        restaurant_id: order.restaurant_id,
+        is_session_order: order.is_session_order || false
+      }));
+    } catch (error) {
+      console.error('Exception fetching session orders:', error);
+      return [];
+    }
+  },
+
+  async getCustomerOrders(sessionId: string, customerId: string): Promise<Order[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning empty array');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .eq('session_id', sessionId)
+        .eq('customer_id', customerId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map(order => ({
+        id: order.id,
+        table: order.table_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.order_items.map((item: Record<string, unknown>) => {
+          const menuItem = item.menu_items as Record<string, unknown>;
+          return {
+            id: item.id as string,
+            order_id: item.order_id as string,
+            menu_item: {
+              id: menuItem.id as string,
+              name: menuItem.name as string,
+              price: item.price_at_time as number,
+              category: menuItem.category as string,
+              prepTime: menuItem.prep_time as number,
+              rating: menuItem.rating as number,
+              image: menuItem.image as string,
+              available: menuItem.available as boolean,
+              kitchen_stations: (menuItem.kitchen_stations as string[]) || [],
+              is_veg: menuItem.is_veg as boolean,
+              cuisine_type: menuItem.cuisine_type as string,
+              description: (menuItem.description as string) || ''
+            },
+            quantity: item.quantity as number,
+            status: item.status as string,
+            kitchen_station: item.kitchen_station_id as string,
+            price_at_time: item.price_at_time as number,
+            selected_add_ons: (item.selected_add_ons as unknown[]) || [],
+            customer_id: item.customer_id as string,
+            customer_name: item.customer_name as string,
+            customer_phone: item.customer_phone as string
+          };
+        }),
+        status: order.status,
+        waiter_id: order.waiter_id,
+        waiter_name: order.waiter_name,
+        timestamp: new Date(order.created_at),
+        total: order.total,
+        estimated_time: order.estimated_time || 0,
+        is_joined_order: order.is_joined_order || false,
+        parent_order_id: order.parent_order_id,
+        session_id: order.session_id,
+        session_otp: order.session_otp,
+        customer_id: order.customer_id,
+        restaurant_id: order.restaurant_id,
+        is_session_order: order.is_session_order || false
+      }));
+    } catch (error) {
+      console.error('Exception fetching customer orders:', error);
+      return [];
+    }
+  },
+
+  async updateSessionTotal(sessionId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session total update');
+      return true;
+    }
+
+    try {
+      // Get all orders for the session
+      const orders = await this.getSessionOrders(sessionId);
+      
+      // Calculate total amount
+      const totalAmount = orders.reduce((sum, order) => sum + order.total, 0);
+
+      // Update session total
+      const { error } = await supabase
+        .from('table_sessions')
+        .update({
+          total_amount: totalAmount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error updating session total:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception updating session total:', error);
+      return false;
+    }
+  },
+
+  async getOrdersByTable(tableId: string, sessionId?: string): Promise<Order[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning empty array');
+      return [];
+    }
+
+    try {
+      let query = supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .eq('table_number', tableId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      // Filter by session if provided
+      if (sessionId) {
+        query = query.eq('session_id', sessionId);
+      }
+
+      const { data, error } = await query;
+
+      if (error || !data) return [];
+
+      return data.map(order => ({
+        id: order.id,
+        table: order.table_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.order_items.map((item: Record<string, unknown>) => {
+          const menuItem = item.menu_items as Record<string, unknown>;
+          return {
+            id: item.id as string,
+            order_id: item.order_id as string,
+            menu_item: {
+              id: menuItem.id as string,
+              name: menuItem.name as string,
+              price: item.price_at_time as number,
+              category: menuItem.category as string,
+              prepTime: menuItem.prep_time as number,
+              rating: menuItem.rating as number,
+              image: menuItem.image as string,
+              available: menuItem.available as boolean,
+              kitchen_stations: (menuItem.kitchen_stations as string[]) || [],
+              is_veg: menuItem.is_veg as boolean,
+              cuisine_type: menuItem.cuisine_type as string,
+              description: (menuItem.description as string) || ''
+            },
+            quantity: item.quantity as number,
+            status: item.status as string,
+            kitchen_station: item.kitchen_station_id as string,
+            price_at_time: item.price_at_time as number,
+            selected_add_ons: (item.selected_add_ons as unknown[]) || [],
+            customer_id: item.customer_id as string,
+            customer_name: item.customer_name as string,
+            customer_phone: item.customer_phone as string
+          };
+        }),
+        status: order.status,
+        waiter_id: order.waiter_id,
+        waiter_name: order.waiter_name,
+        timestamp: new Date(order.created_at),
+        total: order.total,
+        estimated_time: order.estimated_time || 0,
+        is_joined_order: order.is_joined_order || false,
+        parent_order_id: order.parent_order_id,
+        session_id: order.session_id,
+        session_otp: order.session_otp,
+        customer_id: order.customer_id,
+        restaurant_id: order.restaurant_id,
+        is_session_order: order.is_session_order || false
+      }));
+    } catch (error) {
+      console.error('Exception fetching table orders:', error);
+      return [];
+    }
+  },
+
+  // Order management methods
+  async updateOrderStatus(orderId: string, status: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating order status update');
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error updating order status:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception updating order status:', error);
+      return false;
+    }
+  },
+
+  async addOrderToSession(orderId: string, sessionId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating add order to session');
+      return true;
+    }
+
+    try {
+      // Validate session exists and is active
+      const session = await sessionService.getSessionById(sessionId);
+      if (!session || session.status !== 'active') {
+        console.error('Session not found or not active');
+        return false;
+      }
+
+      // Update order with session data
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          session_id: sessionId,
+          is_session_order: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error adding order to session:', error);
+        return false;
+      }
+
+      // Update session total
+      await this.updateSessionTotal(sessionId);
+
+      return true;
+    } catch (error) {
+      console.error('Exception adding order to session:', error);
+      return false;
+    }
+  },
+
+  async removeOrderFromSession(orderId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating remove order from session');
+      return true;
+    }
+
+    try {
+      // Get order to find session ID
+      const { data: order, error: fetchError } = await supabase
+        .from('orders')
+        .select('session_id')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError || !order) {
+        console.error('Order not found');
+        return false;
+      }
+
+      // Update order to remove session data
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          session_id: null,
+          is_session_order: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error removing order from session:', error);
+        return false;
+      }
+
+      // Update session total if session exists
+      if (order.session_id) {
+        await this.updateSessionTotal(order.session_id);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception removing order from session:', error);
+      return false;
+    }
+  },
+
+  async updateOrderItemStatus(itemId: string, status: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating order item status update');
+      return true;
+    }
+
+    try {
+      const updateData: any = {
+        status,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add timing fields based on status
+      switch (status) {
+        case 'preparing':
+          updateData.preparation_start_time = new Date().toISOString();
+          break;
+        case 'prepared':
+          updateData.preparation_end_time = new Date().toISOString();
+          break;
+        case 'delivered':
+          updateData.delivery_time = new Date().toISOString();
+          break;
+      }
+
+      const { error } = await supabase
+        .from('order_items')
+        .update(updateData)
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error updating order item status:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception updating order item status:', error);
+      return false;
+    }
+  },
+
+  async getOrderById(orderId: string): Promise<Order | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning mock order');
+      return {
+        id: orderId,
+        table: 1,
+        customer_name: 'John Doe',
+        customer_phone: '+1234567890',
+        items: [
+          {
+            id: 'item-1',
+            order_id: orderId,
+            menu_item: {
+              id: 'menu-1',
+              name: 'Margherita Pizza',
+              price: 15.99,
+              description: 'Classic tomato and mozzarella',
+              category_id: 'cat-1',
+              prepTime: 20,
+              rating: 4.5,
+              image: '/pizza.jpg',
+              available: true,
+              kitchen_stations: ['pizza-station'],
+              is_veg: true,
+              cuisine_type: 'Italian'
+            },
+            quantity: 2,
+            special_notes: 'Extra cheese please',
+            status: 'order_received',
+            kitchen_station: 'pizza-station',
+            price_at_time: 15.99
+          }
+        ],
+        status: 'active',
+        timestamp: new Date(),
+        total: 31.98,
+        estimated_time: 25,
+        is_joined_order: false,
+        is_session_order: true,
+        session_id: 'session-1',
+        customer_id: 'customer-1'
+      };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error || !data) {
+        console.error('Error fetching order:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        table: data.table_number,
+        customer_name: data.customer_name,
+        customer_phone: data.customer_phone,
+        items: data.order_items.map((item: any) => ({
+          id: item.id,
+          order_id: item.order_id,
+          menu_item: {
+            id: item.menu_items.id,
+            name: item.menu_items.name,
+            price: item.menu_items.price,
+            description: item.menu_items.description,
+            category_id: item.menu_items.category_id,
+            prepTime: item.menu_items.prep_time,
+            rating: item.menu_items.rating || 0,
+            image: item.menu_items.image,
+            available: item.menu_items.available,
+            kitchen_stations: item.menu_items.kitchen_stations || [],
+            is_veg: item.menu_items.is_veg,
+            cuisine_type: item.menu_items.cuisine_type
+          },
+          quantity: item.quantity,
+          special_notes: item.special_notes,
+          status: item.status,
+          kitchen_station: item.kitchen_station,
+          price_at_time: item.price_at_time,
+          preparation_start_time: item.preparation_start_time ? new Date(item.preparation_start_time) : undefined,
+          preparation_end_time: item.preparation_end_time ? new Date(item.preparation_end_time) : undefined,
+          delivery_time: item.delivery_time ? new Date(item.delivery_time) : undefined
+        })),
+        status: data.status,
+        timestamp: new Date(data.created_at),
+        total: data.total,
+        estimated_time: data.estimated_time,
+        is_joined_order: data.is_joined_order,
+        is_session_order: data.is_session_order,
+        session_id: data.session_id,
+        customer_id: data.customer_id,
+        waiter_id: data.waiter_id,
+        waiter_name: data.waiter_name,
+        restaurant_id: data.restaurant_id
+      };
+    } catch (error) {
+      console.error('Exception fetching order:', error);
       return null;
     }
   }
@@ -1488,3 +2115,774 @@ export async function restoreRestaurantData(restaurantId: string): Promise<void>
     throw error;
   }
 }
+
+// ============================================================================
+// SESSION SERVICE FOR OTP-BASED GROUP ORDERING
+// ============================================================================
+
+// OTP Generation Algorithm
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Check if OTP is unique for active sessions on a table
+async function isOTPUnique(otp: string, tableId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    return true; // In dev mode, assume unique
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('table_sessions')
+      .select('id')
+      .eq('session_otp', otp)
+      .eq('table_id', tableId)
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking OTP uniqueness:', error);
+      return false;
+    }
+
+    return !data || data.length === 0;
+  } catch (error) {
+    console.error('Exception checking OTP uniqueness:', error);
+    return false;
+  }
+}
+
+// Generate unique OTP with retry logic
+async function generateUniqueOTP(tableId: string, maxRetries: number = 10): Promise<string | null> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const otp = generateOTP();
+    if (await isOTPUnique(otp, tableId)) {
+      return otp;
+    }
+  }
+  return null;
+}
+
+// Session service for OTP-based group ordering
+export const sessionService = {
+  // Core Methods
+  async createSession(tableId: string, restaurantId: string): Promise<Session | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session creation');
+      const mockSession: Session = {
+        id: `mock-session-${Date.now()}`,
+        table_id: tableId,
+        restaurant_id: restaurantId,
+        session_otp: '123456',
+        status: 'active',
+        total_amount: 0,
+        created_at: new Date(),
+        updated_at: new Date(),
+        restaurant_tables: {
+          table_number: 5,
+          qr_code: 'table-5-qr-code'
+        }
+      };
+      return mockSession;
+    }
+
+    try {
+      // Check if table exists and is active
+      const { data: table, error: tableError } = await supabase
+        .from('restaurant_tables')
+        .select('id, status')
+        .eq('id', tableId)
+        .eq('restaurant_id', restaurantId)
+        .is('deleted_at', null)
+        .single();
+
+      if (tableError || !table) {
+        console.error('Table not found or inactive:', tableError);
+        return null;
+      }
+
+      // Note: Multiple active sessions are allowed per table for different groups
+      // No need to check for existing sessions - each group can have their own session
+
+      // Generate unique OTP
+      const otp = await generateUniqueOTP(tableId);
+      if (!otp) {
+        console.error('Failed to generate unique OTP');
+        return null;
+      }
+
+      // Set OTP expiration (24 hours from now)
+      const otpExpiresAt = new Date();
+      otpExpiresAt.setHours(otpExpiresAt.getHours() + 24);
+
+      // Create session
+      const { data, error } = await supabase
+        .from('table_sessions')
+        .insert({
+          table_id: tableId,
+          restaurant_id: restaurantId,
+          session_otp: otp,
+          otp_expires_at: otpExpiresAt.toISOString(),
+          status: 'active',
+          total_amount: 0
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating session:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        table_id: data.table_id,
+        restaurant_id: data.restaurant_id,
+        session_otp: data.session_otp,
+        otp_expires_at: data.otp_expires_at ? new Date(data.otp_expires_at) : undefined,
+        status: data.status,
+        total_amount: data.total_amount,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        deleted_at: data.deleted_at ? new Date(data.deleted_at) : undefined
+      };
+    } catch (error) {
+      console.error('Exception creating session:', error);
+      return null;
+    }
+  },
+
+  async joinSession(otp: string, tableId: string, customerData: { name: string; phone: string }): Promise<{ session: Session; customer: SessionCustomer } | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session join');
+      const mockSession: Session = {
+        id: `mock-session-${Date.now()}`,
+        table_id: tableId,
+        restaurant_id: 'mock-restaurant',
+        session_otp: otp,
+        status: 'active',
+        total_amount: 0,
+        created_at: new Date(),
+        updated_at: new Date(),
+        restaurant_tables: {
+          table_number: 5,
+          qr_code: 'table-5-qr-code'
+        }
+      };
+      const mockCustomer: SessionCustomer = {
+        id: `mock-customer-${Date.now()}`,
+        session_id: mockSession.id,
+        name: customerData.name,
+        phone: customerData.phone,
+        joined_at: new Date()
+      };
+      return { session: mockSession, customer: mockCustomer };
+    }
+
+    try {
+      // Validate OTP format
+      if (!/^\d{6}$/.test(otp)) {
+        console.error('Invalid OTP format');
+        return null;
+      }
+
+      // Find active session by OTP and table
+      const { data: session, error: sessionError } = await supabase
+        .from('table_sessions')
+        .select('*')
+        .eq('session_otp', otp)
+        .eq('table_id', tableId)
+        .eq('status', 'active')
+        .is('deleted_at', null)
+        .single();
+
+      if (sessionError || !session) {
+        console.error('Session not found or inactive:', sessionError);
+        return null;
+      }
+
+      // Check OTP expiration
+      if (session.otp_expires_at && new Date(session.otp_expires_at) < new Date()) {
+        console.error('OTP has expired');
+        return null;
+      }
+
+      // Check if customer already exists in session
+      const { data: existingCustomer } = await supabase
+        .from('session_customers')
+        .select('*')
+        .eq('session_id', session.id)
+        .eq('phone', customerData.phone)
+        .is('deleted_at', null)
+        .single();
+
+      let customer: SessionCustomer;
+
+      if (existingCustomer) {
+        // Return existing customer
+        customer = {
+          id: existingCustomer.id,
+          session_id: existingCustomer.session_id,
+          name: existingCustomer.name,
+          phone: existingCustomer.phone,
+          joined_at: new Date(existingCustomer.joined_at),
+          deleted_at: existingCustomer.deleted_at ? new Date(existingCustomer.deleted_at) : undefined
+        };
+      } else {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('session_customers')
+          .insert({
+            session_id: session.id,
+            name: customerData.name,
+            phone: customerData.phone
+          })
+          .select()
+          .single();
+
+        if (customerError || !newCustomer) {
+          console.error('Error creating customer:', customerError);
+          return null;
+        }
+
+        customer = {
+          id: newCustomer.id,
+          session_id: newCustomer.session_id,
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          joined_at: new Date(newCustomer.joined_at),
+          deleted_at: newCustomer.deleted_at ? new Date(newCustomer.deleted_at) : undefined
+        };
+      }
+
+      return {
+        session: {
+          id: session.id,
+          table_id: session.table_id,
+          restaurant_id: session.restaurant_id,
+          session_otp: session.session_otp,
+          otp_expires_at: session.otp_expires_at ? new Date(session.otp_expires_at) : undefined,
+          status: session.status,
+          total_amount: session.total_amount,
+          created_at: new Date(session.created_at),
+          updated_at: new Date(session.updated_at),
+          deleted_at: session.deleted_at ? new Date(session.deleted_at) : undefined
+        },
+        customer
+      };
+    } catch (error) {
+      console.error('Exception joining session:', error);
+      return null;
+    }
+  },
+
+  async getActiveSession(tableId: string): Promise<Session | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning null for active session');
+      return null;
+    }
+
+    try {
+      // Get the most recent active session for the table
+      const { data, error } = await supabase
+        .from('table_sessions')
+        .select('*')
+        .eq('table_id', tableId)
+        .eq('status', 'active')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        table_id: data.table_id,
+        restaurant_id: data.restaurant_id,
+        session_otp: data.session_otp,
+        otp_expires_at: data.otp_expires_at ? new Date(data.otp_expires_at) : undefined,
+        status: data.status,
+        total_amount: data.total_amount,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        deleted_at: data.deleted_at ? new Date(data.deleted_at) : undefined
+      };
+    } catch (error) {
+      console.error('Exception getting active session:', error);
+      return null;
+    }
+  },
+
+  async getSessionById(sessionId: string): Promise<Session | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning null for session');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('table_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .is('deleted_at', null)
+        .single();
+
+      if (error || !data) return null;
+
+      return {
+        id: data.id,
+        table_id: data.table_id,
+        restaurant_id: data.restaurant_id,
+        session_otp: data.session_otp,
+        otp_expires_at: data.otp_expires_at ? new Date(data.otp_expires_at) : undefined,
+        status: data.status,
+        total_amount: data.total_amount,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at),
+        deleted_at: data.deleted_at ? new Date(data.deleted_at) : undefined
+      };
+    } catch (error) {
+      console.error('Exception getting session by ID:', error);
+      return null;
+    }
+  },
+
+  async getSessionCustomers(sessionId: string): Promise<SessionCustomer[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning empty array for session customers');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('session_customers')
+        .select('*')
+        .eq('session_id', sessionId)
+        .is('deleted_at', null)
+        .order('joined_at', { ascending: true });
+
+      if (error || !data) return [];
+
+      return data.map(customer => ({
+        id: customer.id,
+        session_id: customer.session_id,
+        name: customer.name,
+        phone: customer.phone,
+        joined_at: new Date(customer.joined_at),
+        deleted_at: customer.deleted_at ? new Date(customer.deleted_at) : undefined
+      }));
+    } catch (error) {
+      console.error('Exception getting session customers:', error);
+      return [];
+    }
+  },
+
+  async getSessionOrders(sessionId: string): Promise<Order[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning empty array for session orders');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .eq('session_id', sessionId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+
+      return data.map(order => ({
+        id: order.id,
+        table: order.table_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.order_items.map((item: Record<string, unknown>) => {
+          const menuItem = item.menu_items as Record<string, unknown>;
+          return {
+            id: item.id as string,
+            order_id: item.order_id as string,
+            menu_item: {
+              id: menuItem.id as string,
+              name: menuItem.name as string,
+              price: item.price_at_time as number,
+              category: menuItem.category as string,
+              prepTime: menuItem.prep_time as number,
+              rating: menuItem.rating as number,
+              image: menuItem.image as string,
+              available: menuItem.available as boolean,
+              kitchen_stations: (menuItem.kitchen_stations as string[]) || [],
+              is_veg: menuItem.is_veg as boolean,
+              cuisine_type: menuItem.cuisine_type as string,
+              description: (menuItem.description as string) || ''
+            },
+            quantity: item.quantity as number,
+            status: item.status as string,
+            kitchen_station: item.kitchen_station_id as string,
+            price_at_time: item.price_at_time as number,
+            selected_add_ons: (item.selected_add_ons as unknown[]) || []
+          };
+        }),
+        status: order.status,
+        waiter_id: order.waiter_id,
+        waiter_name: order.waiter_name,
+        timestamp: new Date(order.created_at),
+        total: order.total,
+        estimated_time: order.estimated_time || 0,
+        is_joined_order: order.is_joined_order || false,
+        parent_order_id: order.parent_order_id
+      }));
+    } catch (error) {
+      console.error('Exception getting session orders:', error);
+      return [];
+    }
+  },
+
+  // Management Methods
+  async regenerateOTP(sessionId: string): Promise<string | null> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning mock OTP');
+      return '654321';
+    }
+
+    try {
+      // Get session to find table_id
+      const session = await this.getSessionById(sessionId);
+      if (!session) {
+        console.error('Session not found');
+        return null;
+      }
+
+      // Generate new unique OTP
+      const newOtp = await generateUniqueOTP(session.table_id);
+      if (!newOtp) {
+        console.error('Failed to generate unique OTP');
+        return null;
+      }
+
+      // Set new OTP expiration (24 hours from now)
+      const otpExpiresAt = new Date();
+      otpExpiresAt.setHours(otpExpiresAt.getHours() + 24);
+
+      // Update session with new OTP
+      const { error } = await supabase
+        .from('table_sessions')
+        .update({
+          session_otp: newOtp,
+          otp_expires_at: otpExpiresAt.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error regenerating OTP:', error);
+        return null;
+      }
+
+      return newOtp;
+    } catch (error) {
+      console.error('Exception regenerating OTP:', error);
+      return null;
+    }
+  },
+
+  async clearSession(sessionId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session clear');
+      return true;
+    }
+
+    try {
+      // Update session status to cleared
+      const { error } = await supabase
+        .from('table_sessions')
+        .update({
+          status: 'cleared',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error clearing session:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception clearing session:', error);
+      return false;
+    }
+  },
+
+  async updateSessionTotal(sessionId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session total update');
+      return true;
+    }
+
+    try {
+      // Get all orders for the session
+      const orders = await this.getSessionOrders(sessionId);
+      
+      // Calculate total amount
+      const totalAmount = orders.reduce((sum, order) => sum + order.total, 0);
+
+      // Update session total
+      const { error } = await supabase
+        .from('table_sessions')
+        .update({
+          total_amount: totalAmount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error updating session total:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception updating session total:', error);
+      return false;
+    }
+  },
+
+  async closeSession(sessionId: string): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, simulating session close');
+      return true;
+    }
+
+    try {
+      // Update session status to billed
+      const { error } = await supabase
+        .from('table_sessions')
+        .update({
+          status: 'billed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error closing session:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Exception closing session:', error);
+      return false;
+    }
+  },
+
+  async getRestaurantSessions(restaurantId: string): Promise<Session[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning mock restaurant sessions');
+      return [
+        {
+          id: 'mock-session-1',
+          table_id: 'mock-table-1',
+          restaurant_id: restaurantId,
+          session_otp: '123456',
+          status: 'active',
+          total_amount: 4500,
+          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          updated_at: new Date(),
+          restaurant_tables: {
+            table_number: 5,
+            qr_code: 'table-5-qr-code'
+          }
+        },
+        {
+          id: 'mock-session-2',
+          table_id: 'mock-table-2',
+          restaurant_id: restaurantId,
+          session_otp: '789012',
+          status: 'billed',
+          total_amount: 3200,
+          created_at: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+          updated_at: new Date(),
+          restaurant_tables: {
+            table_number: 8,
+            qr_code: 'table-8-qr-code'
+          }
+        }
+      ];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('table_sessions')
+        .select(`
+          *,
+          restaurant_tables (
+            table_number,
+            qr_code
+          )
+        `)
+        .eq('restaurant_id', restaurantId)
+        .in('status', ['active', 'billed'])
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting restaurant sessions:', error);
+        return [];
+      }
+
+      return (data || []).map(session => ({
+        id: session.id,
+        table_id: session.table_id,
+        restaurant_id: session.restaurant_id,
+        session_otp: session.session_otp,
+        otp_expires_at: session.otp_expires_at ? new Date(session.otp_expires_at) : undefined,
+        status: session.status,
+        total_amount: session.total_amount,
+        created_at: new Date(session.created_at),
+        updated_at: new Date(session.updated_at),
+        deleted_at: session.deleted_at ? new Date(session.deleted_at) : undefined,
+        restaurant_tables: session.restaurant_tables
+      }));
+    } catch (error) {
+      console.error('Exception getting restaurant sessions:', error);
+      return [];
+    }
+  },
+
+  async getAllSessionCustomers(): Promise<SessionCustomer[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning mock session customers');
+      return [
+        {
+          id: 'mock-customer-1',
+          session_id: 'mock-session-1',
+          name: 'John Doe',
+          phone: '+1234567890',
+          joined_at: new Date(Date.now() - 2 * 60 * 60 * 1000)
+        },
+        {
+          id: 'mock-customer-2',
+          session_id: 'mock-session-1',
+          name: 'Jane Smith',
+          phone: '+0987654321',
+          joined_at: new Date(Date.now() - 1 * 60 * 60 * 1000)
+        },
+        {
+          id: 'mock-customer-3',
+          session_id: 'mock-session-2',
+          name: 'Bob Johnson',
+          phone: '+1122334455',
+          joined_at: new Date(Date.now() - 30 * 60 * 1000)
+        }
+      ];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('session_customers')
+        .select('*')
+        .is('deleted_at', null)
+        .order('joined_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting all session customers:', error);
+        return [];
+      }
+
+      return (data || []).map(customer => ({
+        id: customer.id,
+        session_id: customer.session_id,
+        name: customer.name,
+        phone: customer.phone,
+        joined_at: new Date(customer.joined_at),
+        deleted_at: customer.deleted_at ? new Date(customer.deleted_at) : undefined
+      }));
+    } catch (error) {
+      console.error('Exception getting all session customers:', error);
+      return [];
+    }
+  },
+
+  async getAllActiveSessions(): Promise<Session[]> {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, returning mock active sessions');
+      return [
+        {
+          id: 'mock-session-1',
+          table_id: 'mock-table-1',
+          restaurant_id: 'mock-restaurant-1',
+          session_otp: '123456',
+          status: 'active',
+          total_amount: 4500,
+          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          updated_at: new Date(),
+          restaurant_tables: {
+            table_number: 5,
+            qr_code: 'table-5-qr-code'
+          }
+        },
+        {
+          id: 'mock-session-2',
+          table_id: 'mock-table-2',
+          restaurant_id: 'mock-restaurant-1',
+          session_otp: '789012',
+          status: 'active',
+          total_amount: 3200,
+          created_at: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+          updated_at: new Date(),
+          restaurant_tables: {
+            table_number: 8,
+            qr_code: 'table-8-qr-code'
+          }
+        }
+      ];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('table_sessions')
+        .select(`
+          *,
+          restaurant_tables (
+            table_number,
+            qr_code
+          )
+        `)
+        .eq('status', 'active')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting all active sessions:', error);
+        return [];
+      }
+
+      return (data || []).map(session => ({
+        id: session.id,
+        table_id: session.table_id,
+        restaurant_id: session.restaurant_id,
+        session_otp: session.session_otp,
+        otp_expires_at: session.otp_expires_at ? new Date(session.otp_expires_at) : undefined,
+        status: session.status,
+        total_amount: session.total_amount,
+        created_at: new Date(session.created_at),
+        updated_at: new Date(session.updated_at),
+        deleted_at: session.deleted_at ? new Date(session.deleted_at) : undefined,
+        restaurant_tables: session.restaurant_tables
+      }));
+    } catch (error) {
+      console.error('Exception getting all active sessions:', error);
+      return [];
+    }
+  }
+};

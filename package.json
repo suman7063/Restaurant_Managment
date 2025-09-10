@@ -19,13 +19,15 @@
     "framer-motion": "^12.23.11",
     "lucide-react": "^0.528.0",
     "next": "15.4.4",
+    "node-fetch": "^3.3.2",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.5.2",
     "react-qr-code": "^2.0.18",
     "socket.io-client": "^4.8.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^4.0.14"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

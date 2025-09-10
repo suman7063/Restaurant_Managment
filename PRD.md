@@ -4,7 +4,7 @@ The Restaurant Management System is a comprehensive B2B SaaS solution designed f
 Target Market: Fine dining and casual dining restaurants (independent and chains) Revenue Model: SaaS Subscription with tiered pricing Core Value Proposition: QR-based ordering with real-time notifications, individual item delivery, and multi-language support
 Subscription Model & Pricing Strategy
 Pricing Tiers
-Starter Plan ($99/month)
+Starter Plan (₹8,250/month)
 Up to 20 tables
 Basic menu management (up to 100 items)
 Single kitchen configuration
@@ -13,7 +13,7 @@ Individual item delivery
 Basic analytics
 English + 1 local language
 Email support
-Professional Plan ($199/month)
+Professional Plan (₹16,500/month)
 Up to 50 tables
 Advanced menu management (unlimited items)
 Multiple kitchen stations (up to 5)
@@ -23,7 +23,7 @@ Individual item delivery with special notes
 Detailed analytics and reporting
 English + 2 local languages
 Priority email + chat support
-Enterprise Plan ($399/month)
+Enterprise Plan (₹33,000/month)
 Unlimited tables
 Unlimited menu items and kitchens
 Multi-location support
@@ -33,10 +33,10 @@ API access for integrations
 Dedicated account manager
 Phone + email + chat support
 Add-ons:
-Additional locations: $50/month per location
-Custom branding: $25/month
-Advanced reporting: $30/month
-Additional languages: $15/month per language
+Additional locations: ₹4,150/month per location
+Custom branding: ₹2,075/month
+Advanced reporting: ₹2,490/month
+Additional languages: ₹1,245/month per language
 Trial & Payment
 14-day free trial for all plans
 Monthly or annual billing (10% discount for annual)
@@ -417,13 +417,13 @@ Beta testing with select customers
 Success Metrics
 Subscription Business Metrics
 Monthly Recurring Revenue (MRR) growth target: 20% month-over-month
-Customer Acquisition Cost (CAC): <$500
-Lifetime Value (LTV): >$5,000
+Customer Acquisition Cost (CAC): <₹41,500
+Lifetime Value (LTV): >₹415,000
 LTV:CAC ratio: >10:1
 Monthly churn rate: <5%
 Trial to paid conversion rate: >20%
 Net Revenue Retention: >110%
-Average Revenue Per User (ARPU): $200-250
+Average Revenue Per User (ARPU): ₹16,600-20,750
 Plan upgrade rate: >15% annually
 Product Adoption Metrics
 Daily Active Restaurants: >80% of subscribers

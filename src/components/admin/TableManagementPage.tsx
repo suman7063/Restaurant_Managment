@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Edit, Utensils, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Utensils, RefreshCw, Trash2, QrCode } from 'lucide-react';
 import { Table } from '../types';
 import { formatCurrency, getTableStatusColor } from '../utils';
 import { fetchTables } from '../../lib/database';
-import { AddTableModal, EditTableModal, DeleteTableModal } from './';
+import { AddTableModal, EditTableModal, DeleteTableModal, QRCodeModal } from './';
 import { Input } from '../ui';
 
 interface TableManagementPageProps {
@@ -19,6 +19,7 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [error, setError] = useState('');
 
@@ -73,6 +74,12 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
   const handleDeleteTable = (table: Table) => {
     setSelectedTable(table);
     setIsDeleteModalOpen(true);
+  };
+
+  // Handle view QR code
+  const handleViewQRCode = (table: Table) => {
+    setSelectedTable(table);
+    setIsQRModalOpen(true);
   };
 
   // Filter tables based on search and status
@@ -198,11 +205,28 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">QR Code:</span>
-                <span className="text-xs text-gray-500 font-mono">{table.qr_code.slice(0, 8)}...</span>
+                <span className="text-xs text-gray-500 font-mono cursor-pointer hover:text-blue-600" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewQRCode(table);
+                      }}
+                      title="Click to view QR code">
+                  {table.qr_code.slice(0, 8)}...
+                </span>
               </div>
             </div>
             
             <div className="flex gap-2">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewQRCode(table);
+                }}
+                className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm hover:bg-green-200 transition-all duration-300 flex items-center justify-center gap-1 group-hover:bg-green-600 group-hover:text-white"
+              >
+                <QrCode className="w-4 h-4" />
+                QR Code
+              </button>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -283,6 +307,17 @@ const TableManagementPage: React.FC<TableManagementPageProps> = ({ restaurantId 
         }}
         onTableDeleted={handleTableDeleted}
         table={selectedTable}
+      />
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        isOpen={isQRModalOpen}
+        onClose={() => {
+          setIsQRModalOpen(false);
+          setSelectedTable(null);
+        }}
+        table={selectedTable}
+        restaurantId={restaurantId}
       />
     </div>
   );

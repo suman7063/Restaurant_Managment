@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, AlertCircle, CheckCircle } from 'lucide-react';
 import { createTable, generateQRCode } from '../../lib/database';
 import { Input, Modal } from '../ui';
+import { QRCodeModal } from './';
 
 interface AddTableModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [createdTable, setCreatedTable] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +47,7 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
       const qrCode = generateQRCode(number, restaurantId);
 
       // Create table (duplicate checking will be handled by the API)
-      await createTable({
+      const newTable = await createTable({
         table_number: number,
         qr_code: qrCode,
         restaurant_id: restaurantId,
@@ -53,15 +56,15 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
         revenue: 0
       });
 
+      setCreatedTable(newTable);
       setSuccess(`Table ${number} created successfully!`);
       setTableNumber('');
       
-      // Close modal after a short delay
+      // Show QR code modal after a short delay
       setTimeout(() => {
-        onTableAdded();
-        onClose();
+        setShowQRModal(true);
         setSuccess('');
-      }, 1500);
+      }, 1000);
 
     } catch (err) {
       console.error('Error creating table:', err);
@@ -80,23 +83,31 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
     }
   };
 
+  const handleQRModalClose = () => {
+    setShowQRModal(false);
+    setCreatedTable(null);
+    onTableAdded();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Add New Table"
-      disabled={isLoading}
-      maxWidth="md"
-      showFooter={true}
-      cancelText="Cancel"
-      actionText={isLoading ? "Creating..." : "Create Table"}
-      onAction={() => document.querySelector('form')?.requestSubmit()}
-      actionDisabled={isLoading || !tableNumber.trim()}
-      actionLoading={isLoading}
-      actionVariant="primary"
-    >
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Add New Table"
+        disabled={isLoading}
+        maxWidth="md"
+        showFooter={true}
+        cancelText="Cancel"
+        actionText={isLoading ? "Creating..." : "Create Table"}
+        onAction={() => document.querySelector('form')?.requestSubmit()}
+        actionDisabled={isLoading || !tableNumber.trim()}
+        actionLoading={isLoading}
+        actionVariant="primary"
+      >
       <div className="p-6">
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,6 +135,7 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
             <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
               <span className="text-green-700 text-sm">{success}</span>
+              <span className="text-green-600 text-xs ml-auto">Opening QR code...</span>
             </div>
           )}
 
@@ -131,6 +143,15 @@ const AddTableModal: React.FC<AddTableModalProps> = ({
         </form>
       </div>
     </Modal>
+
+    {/* QR Code Modal */}
+    <QRCodeModal
+      isOpen={showQRModal}
+      onClose={handleQRModalClose}
+      table={createdTable}
+      restaurantId={restaurantId}
+    />
+  </>
   );
 };
 

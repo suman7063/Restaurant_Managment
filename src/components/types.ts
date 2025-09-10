@@ -90,6 +90,10 @@ export interface OrderItem {
   preparation_end_time?: Date;
   delivery_time?: Date;
   price_at_time: number;
+  // Session-based ordering additions
+  customer_id?: string; // UUID reference to session_customers
+  customer_name?: string; // Customer name for quick reference
+  customer_phone?: string; // Customer phone for quick reference
 }
 
 export interface Order {
@@ -106,6 +110,12 @@ export interface Order {
   estimated_time: number;
   is_joined_order: boolean; // Whether this is part of a joined table order
   parent_order_id?: string; // UUID for joined orders
+  // Session-based ordering additions
+  session_id?: string; // UUID reference to table_sessions
+  session_otp?: string; // Session OTP for quick reference
+  customer_id?: string; // UUID reference to session_customers
+  restaurant_id?: string; // UUID reference to restaurants
+  is_session_order: boolean; // Whether this order is part of a session
 }
 
 export interface Table {
@@ -175,3 +185,31 @@ export type ItemStatus = 'order_received' | 'preparing' | 'prepared' | 'delivere
 export type TableStatus = 'available' | 'occupied' | 'needs_reset';
 
 export type OrderStatus = 'active' | 'completed' | 'cancelled'; 
+
+// Session Management Types for OTP-based Group Ordering
+export interface Session {
+  id: string; // UUID
+  table_id: string; // UUID reference to restaurant_tables
+  restaurant_id: string; // UUID reference to restaurants
+  session_otp: string; // 6-digit OTP for joining
+  otp_expires_at?: Date; // Optional OTP expiration
+  status: 'active' | 'billed' | 'cleared';
+  total_amount: number; // Total amount in cents
+  created_at: Date;
+  updated_at: Date;
+  deleted_at?: Date; // Soft delete timestamp
+  // Table information from joined query
+  restaurant_tables?: {
+    table_number: number;
+    qr_code: string;
+  };
+}
+
+export interface SessionCustomer {
+  id: string; // UUID
+  session_id: string; // UUID reference to table_sessions
+  name: string; // Customer name
+  phone: string; // Customer phone number
+  joined_at: Date;
+  deleted_at?: Date; // Soft delete timestamp
+} 

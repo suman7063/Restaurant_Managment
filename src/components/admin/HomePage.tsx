@@ -172,7 +172,7 @@ const HomePage: React.FC<HomePageProps> = ({
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <button 
               onClick={() => handleQuickAction('new-order')}
               className="group bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 hover:from-green-100 hover:to-green-200 transition-all duration-300 transform hover:scale-105"
@@ -209,6 +209,19 @@ const HomePage: React.FC<HomePageProps> = ({
                 </div>
                 <span className="font-semibold text-purple-800">Reports</span>
                 <span className="text-xs text-purple-600 mt-1">View analytics</span>
+              </div>
+            </button>
+            
+            <button 
+              onClick={() => handleQuickAction('sessions')}
+              className="group bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl border border-cyan-200 hover:from-cyan-100 hover:to-cyan-200 transition-all duration-300 transform hover:scale-105"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-cyan-200 p-3 rounded-lg group-hover:scale-110 transition-transform duration-300 mb-2">
+                  <Users className="w-6 h-6 text-cyan-700" />
+                </div>
+                <span className="font-semibold text-cyan-800">Sessions</span>
+                <span className="text-xs text-cyan-600 mt-1">Group ordering</span>
               </div>
             </button>
             

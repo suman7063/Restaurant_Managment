@@ -52,7 +52,7 @@ const AnimatedOnboardingPage: React.FC = () => {
     {
       id: 'starter',
       name: 'Starter Plan',
-      price: '$99/month',
+      price: '₹8,250/month',
       icon: Star,
       color: 'from-blue-500 to-cyan-500',
       features: [
@@ -69,7 +69,7 @@ const AnimatedOnboardingPage: React.FC = () => {
     {
       id: 'professional',
       name: 'Professional Plan',
-      price: '$199/month',
+      price: '₹16,500/month',
       icon: Zap,
       color: 'from-purple-500 to-pink-500',
       features: [
@@ -87,7 +87,7 @@ const AnimatedOnboardingPage: React.FC = () => {
     {
       id: 'enterprise',
       name: 'Enterprise Plan',
-      price: '$399/month',
+      price: '₹33,000/month',
       icon: Shield,
       color: 'from-orange-500 to-red-500',
       features: [
