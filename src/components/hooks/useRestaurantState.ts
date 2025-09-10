@@ -201,7 +201,8 @@ export const useRestaurantState = (): UseRestaurantStateReturn => {
           total: cartTotal,
           estimated_time: Math.max(...cart.map(item => item.prepTime)) + 5,
           is_joined_order: false,
-          parent_order_id: undefined
+          parent_order_id: undefined,
+          is_session_order: false
         };
         setOrders(prevOrders => [simulatedOrder, ...prevOrders]);
         setCart([]);

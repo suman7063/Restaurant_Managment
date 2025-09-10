@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users, Clock, DollarSign, ShoppingCart, ChefHat, Search, Filter, AlertCircle, CheckCircle } from 'lucide-react'
-import { Session, Order, SessionCustomer, User } from '../components/types'
-import SessionOrderGroup from '../components/SessionOrderGroup'
-import { formatCurrency } from '../components/utils'
+import { Session, Order, SessionCustomer, User } from '../../../components/types'
+import SessionOrderGroup from '../../../components/SessionOrderGroup'
+import { formatCurrency } from '../../../components/utils'
 
 export default function KitchenDashboardPage() {
   const router = useRouter()
@@ -245,9 +245,9 @@ export default function KitchenDashboardPage() {
               <span className="text-sm text-gray-500">
                 Welcome, {user?.name || 'Chef'}
               </span>
-              {user?.kitchen_station_name && (
+              {user?.kitchen_station && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                  Station: {user.kitchen_station_name}
+                  Station: {user.kitchen_station}
                 </span>
               )}
               <button
@@ -453,7 +453,7 @@ export default function KitchenDashboardPage() {
                     isExpanded={expandedSessions.has(session.id)}
                     onToggleExpanded={toggleSessionExpanded}
                     kitchenStations={kitchenStations}
-                    currentStation={user?.kitchen_station_name}
+                    currentStation={user?.kitchen_station}
                   />
                 )
               })

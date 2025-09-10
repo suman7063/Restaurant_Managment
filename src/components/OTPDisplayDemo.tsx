@@ -69,7 +69,8 @@ const sampleOrders: Order[] = [
     timestamp: new Date(Date.now() - 20 * 60 * 1000),
     total: 1500,
     estimated_time: 15,
-    is_joined_order: true
+    is_joined_order: true,
+    is_session_order: true
   }
 ];
 

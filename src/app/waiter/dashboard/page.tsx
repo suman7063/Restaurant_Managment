@@ -75,7 +75,8 @@ export default function WaiterDashboardPage() {
               special_notes: 'Extra cheese please',
               status: 'order_received',
               kitchen_station: 'pizza-station',
-              price_at_time: 15.99
+              price_at_time: 15.99,
+              selected_add_ons: []
             }
           ],
           status: 'active',

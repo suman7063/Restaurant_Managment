@@ -1212,7 +1212,8 @@ export const orderService = {
             special_notes: 'Extra cheese please',
             status: 'order_received',
             kitchen_station: 'pizza-station',
-            price_at_time: 15.99
+            price_at_time: 15.99,
+            selected_add_ons: []
           }
         ],
         status: 'active',
@@ -2539,7 +2540,8 @@ export const sessionService = {
         total: order.total,
         estimated_time: order.estimated_time || 0,
         is_joined_order: order.is_joined_order || false,
-        parent_order_id: order.parent_order_id
+        parent_order_id: order.parent_order_id,
+        is_session_order: order.is_session_order || false
       }));
     } catch (error) {
       console.error('Exception getting session orders:', error);

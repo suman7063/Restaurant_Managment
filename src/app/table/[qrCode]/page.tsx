@@ -2,11 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import CustomerInterface from '../../../components/CustomerInterface';
-import { Session, SessionCustomer, Order } from '../../../components/types';
+import { User, CartItem, MenuItem, MenuCustomization, MenuAddOn, Session, SessionCustomer, Order } from '../../../components/types';
 import { SessionChoiceModal } from '../../../components/SessionChoiceModal';
 import { OTPDisplayModal } from '../../../components/OTPDisplayModal';
 import { CustomerRegistrationModal } from '../../../components/CustomerRegistrationModal';
-import { User, CartItem, MenuItem, MenuCustomization, MenuAddOn, Session, SessionCustomer } from '../../../components/types';
 import { menuService } from '../../../lib/database';
 import { formatCurrency } from '../../../components/utils';
 
@@ -274,8 +273,8 @@ const TablePage: React.FC = () => {
   };
 
   // Handle session joining
-  const handleJoinSession = async (otp: string, customerData: { name: string; phone: string }) => {
-    if (!tableInfo) return;
+  const handleJoinSession = async (otp: string, customerData: { name: string; phone: string }): Promise<boolean> => {
+    if (!tableInfo) return false;
 
     try {
       setSessionLoading(true);
@@ -337,11 +336,13 @@ const TablePage: React.FC = () => {
       
       // Close session choice modal
       setShowSessionChoice(false);
+      
+      return true;
 
     } catch (error: any) {
       console.error('Error joining session:', error);
       setSessionError(error.message || 'Failed to join session');
-      throw error;
+      return false;
     } finally {
       setSessionLoading(false);
     }
@@ -580,17 +581,17 @@ const TablePage: React.FC = () => {
         onClose={() => setShowSessionChoice(false)}
         tableId={tableInfo.id}
         restaurantId={tableInfo.restaurant_id}
-        onJoinSession={(otp, customerData) => {
+        onJoinSession={async (otp, customerData) => {
           if (!otp && !customerData.name) {
             // This is a signal to start the join flow
             setSessionAction('join');
             setShowCustomerRegistration(true);
           } else {
             // This is the actual join call
-            handleJoinSession(otp, customerData);
+            await handleJoinSession(otp, customerData);
           }
         }}
-        onCreateSession={(customerData) => {
+        onCreateSession={async (customerData) => {
           setShowSessionChoice(false);
           setSessionAction('create');
           setShowCustomerRegistration(true);
@@ -618,7 +619,7 @@ const TablePage: React.FC = () => {
       <CustomerRegistrationModal
         isOpen={showCustomerRegistration}
         onClose={() => setShowCustomerRegistration(false)}
-        onSubmit={(customerData) => {
+        onSubmit={async (customerData) => {
           if (sessionAction === 'join') {
             // For joining, store customer data and show OTP entry
             setPendingCustomerData(customerData);
@@ -626,7 +627,7 @@ const TablePage: React.FC = () => {
             setShowOTPEntry(true);
           } else {
             // For creating, proceed with session creation
-            handleCreateSession(customerData);
+            await handleCreateSession(customerData);
           }
         }}
         title="Customer Registration"

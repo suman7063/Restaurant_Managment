@@ -9,11 +9,20 @@ const createOrderSchema = z.object({
   items: z.array(z.object({
     id: z.string().uuid('Invalid menu item ID'),
     name: z.string(),
+    description: z.string(),
     price: z.number().positive('Price must be positive'),
-    quantity: z.number().positive('Quantity must be positive'),
+    category_id: z.string().uuid('Invalid category ID'),
     prepTime: z.number().nonnegative('Prep time must be non-negative'),
-    kitchen_stations: z.array(z.string()).optional(),
-    selected_add_ons: z.array(z.any()).optional()
+    rating: z.number().nonnegative('Rating must be non-negative'),
+    image: z.string(),
+    available: z.boolean(),
+    kitchen_stations: z.array(z.string()),
+    is_veg: z.boolean(),
+    cuisine_type: z.string(),
+    quantity: z.number().positive('Quantity must be positive'),
+    special_notes: z.string().optional(),
+    selected_customization: z.any().optional(),
+    selected_add_ons: z.array(z.any()).default([])
   })).min(1, 'At least one item is required'),
   waiterId: z.string().uuid('Invalid waiter ID').nullable().optional(),
   sessionId: z.string().uuid('Invalid session ID').nullable().optional(),
@@ -28,15 +37,24 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validationResult = createOrderSchema.safeParse(body)
     if (!validationResult.success) {
-      console.error('Validation errors:', validationResult.error.errors);
+      console.error('Validation errors:', validationResult.error.issues);
       return NextResponse.json({
         success: false,
         message: 'Invalid request data',
-        errors: validationResult.error.errors
+        errors: validationResult.error.issues
       }, { status: 400 })
     }
 
-    const orderData = validationResult.data
+    const validatedData = validationResult.data
+
+    // Transform data to match service expectations
+    const orderData = {
+      ...validatedData,
+      waiterId: validatedData.waiterId || undefined,
+      sessionId: validatedData.sessionId || undefined,
+      customerId: validatedData.customerId || undefined,
+      restaurantId: validatedData.restaurantId || undefined
+    }
 
     // Create order
     const order = await orderService.createOrder(orderData)

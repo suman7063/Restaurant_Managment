@@ -88,7 +88,7 @@ const SessionManagementPage: React.FC<SessionManagementPageProps> = ({ restauran
         console.log('📊 Final sessions array length:', sessions.length);
         
         // Convert string dates to Date objects
-        const processedSessions = sessions.map(session => ({
+        const processedSessions = sessions.map((session: any) => ({
           ...session,
           created_at: new Date(session.created_at),
           updated_at: new Date(session.updated_at),

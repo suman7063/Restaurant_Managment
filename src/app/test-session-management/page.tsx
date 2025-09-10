@@ -71,7 +71,8 @@ const sampleOrders: Order[] = [
         price_at_time: 1500,
         customer_id: 'customer-1',
         customer_name: 'John Doe',
-        customer_phone: '+1234567890'
+        customer_phone: '+1234567890',
+        selected_add_ons: []
       }
     ],
     status: 'completed',
@@ -114,7 +115,8 @@ const sampleOrders: Order[] = [
         price_at_time: 800,
         customer_id: 'customer-2',
         customer_name: 'Jane Smith',
-        customer_phone: '+1987654321'
+        customer_phone: '+1987654321',
+        selected_add_ons: []
       },
       {
         id: 'item-3',
@@ -139,7 +141,8 @@ const sampleOrders: Order[] = [
         price_at_time: 1800,
         customer_id: 'customer-2',
         customer_name: 'Jane Smith',
-        customer_phone: '+1987654321'
+        customer_phone: '+1987654321',
+        selected_add_ons: []
       }
     ],
     status: 'active',
@@ -182,7 +185,8 @@ const sampleOrders: Order[] = [
         price_at_time: 1200,
         customer_id: 'customer-3',
         customer_name: 'Bob Johnson',
-        customer_phone: '+1555666777'
+        customer_phone: '+1555666777',
+        selected_add_ons: []
       }
     ],
     status: 'active',

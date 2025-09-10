@@ -25,7 +25,7 @@ export async function GET(
       return NextResponse.json({
         success: false,
         message: 'Invalid order ID format',
-        errors: validationResult.error.errors
+        errors: validationResult.error.issues
       }, { status: 400 })
     }
 
@@ -99,7 +99,7 @@ export async function PATCH(
       return NextResponse.json({
         success: false,
         message: 'Invalid order ID format',
-        errors: orderIdValidation.error.errors
+        errors: orderIdValidation.error.issues
       }, { status: 400 })
     }
 
@@ -109,7 +109,7 @@ export async function PATCH(
       return NextResponse.json({
         success: false,
         message: 'Invalid request data',
-        errors: bodyValidation.error.errors
+        errors: bodyValidation.error.issues
       }, { status: 400 })
     }
 

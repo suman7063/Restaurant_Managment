@@ -93,7 +93,7 @@ export async function GET(
     // Transform orders data
     const transformedOrders = orders?.map(order => {
       // Calculate total from order items to ensure accuracy (amounts are already in rupees)
-      const calculatedTotal = order.order_items?.reduce((sum, item) => 
+      const calculatedTotal = order.order_items?.reduce((sum: any, item: any) => 
         sum + (item.price_at_time * item.quantity), 0) || 0;
       
       return {
@@ -107,7 +107,7 @@ export async function GET(
         status: order.status,
         timestamp: new Date(order.created_at),
         is_session_order: order.is_joined_order,
-        items: order.order_items?.map(item => ({
+        items: order.order_items?.map((item: any) => ({
           id: item.id,
           order_id: item.order_id,
           menu_item: {

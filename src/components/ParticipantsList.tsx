@@ -67,7 +67,7 @@ export const ParticipantsList: React.FC<ParticipantsListProps> = ({
         : null;
       
       const lastActivity = lastOrder ? new Date(lastOrder.timestamp) : new Date(participant.joined_at);
-      const isActive = lastOrder && (Date.now() - lastActivity.getTime()) < 30 * 60 * 1000; // 30 minutes
+      const isActive = Boolean(lastOrder && (Date.now() - lastActivity.getTime()) < 30 * 60 * 1000); // 30 minutes
       
       return {
         customer: participant,

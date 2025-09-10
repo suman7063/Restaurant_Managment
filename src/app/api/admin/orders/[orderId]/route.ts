@@ -5,7 +5,7 @@ import { supabase } from '../../../../../lib/supabase';
 // PATCH /api/admin/orders/[orderId] - Update order status (admin only)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     // Check authentication and authorization
@@ -15,7 +15,7 @@ export async function PATCH(
     }
 
     const { user } = authResult;
-    const { orderId } = params;
+    const { orderId } = await params;
     const body = await request.json();
     const { status } = body;
 
@@ -80,7 +80,7 @@ export async function PATCH(
 // GET /api/admin/orders/[orderId] - Get specific order details (admin only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     // Check authentication and authorization
@@ -90,7 +90,7 @@ export async function GET(
     }
 
     const { user } = authResult;
-    const { orderId } = params;
+    const { orderId } = await params;
 
     // Get order details
     const { data: order, error } = await supabase
@@ -146,7 +146,7 @@ export async function GET(
       status: order.status,
       timestamp: order.created_at,
       is_session_order: order.is_joined_order,
-      items: order.order_items?.map(item => ({
+      items: order.order_items?.map((item: any) => ({
         id: item.id,
         menu_item: {
           id: item.menu_items?.id || '',

@@ -111,7 +111,8 @@ export default function AdminDashboardPage() {
         timestamp: new Date(),
         total: 25.98,
         estimated_time: 20,
-        is_joined_order: false
+        is_joined_order: false,
+        is_session_order: false
       },
       {
         id: '2',
@@ -149,7 +150,8 @@ export default function AdminDashboardPage() {
         timestamp: new Date(Date.now() - 300000), // 5 minutes ago
         total: 9.99,
         estimated_time: 15,
-        is_joined_order: false
+        is_joined_order: false,
+        is_session_order: false
       }
     ]
 

@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { GroupOrderDisplay } from '../../components/GroupOrderDisplay';
-import { NotificationToast } from '../../components/NotificationToast';
+import NotificationToast from '../../components/NotificationToast';
 
 export default function TestGroupOrderDisplayPage() {
   const [notifications, setNotifications] = useState<Array<{
     id: string;
     message: string;
     type: 'success' | 'error' | 'warning' | 'info';
+    read: boolean;
+    created_at: Date;
   }>>([]);
 
   // Sample session ID for testing
@@ -17,7 +19,13 @@ export default function TestGroupOrderDisplayPage() {
 
   const addNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
     const id = Date.now().toString();
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications(prev => [...prev, { 
+      id, 
+      message, 
+      type, 
+      read: false, 
+      created_at: new Date() 
+    }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
@@ -106,11 +114,14 @@ export default function TestGroupOrderDisplayPage() {
         </div>
       </div>
 
-      {/* Notification Toast */}
-      <NotificationToast
-        notifications={notifications}
-        onRemove={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-      />
+      {/* Notification Toasts */}
+      {notifications.map(notification => (
+        <NotificationToast
+          key={notification.id}
+          notification={notification}
+          onClose={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
+        />
+      ))}
     </div>
   );
 } 

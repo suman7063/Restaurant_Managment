@@ -56,7 +56,8 @@ export default function TestSessionInfoPage() {
           quantity: 2,
           status: 'delivered',
           kitchen_station: 'grill',
-          price_at_time: 1500
+          price_at_time: 1500,
+          selected_add_ons: []
         }
       ],
       status: 'completed',
@@ -80,7 +81,8 @@ export default function TestSessionInfoPage() {
           quantity: 1,
           status: 'delivered',
           kitchen_station: 'oven',
-          price_at_time: 2000
+          price_at_time: 2000,
+          selected_add_ons: []
         }
       ],
       status: 'completed',
@@ -104,7 +106,8 @@ export default function TestSessionInfoPage() {
           quantity: 1,
           status: 'delivered',
           kitchen_station: 'stove',
-          price_at_time: 1800
+          price_at_time: 1800,
+          selected_add_ons: []
         },
         {
           id: '4',
@@ -113,7 +116,8 @@ export default function TestSessionInfoPage() {
           quantity: 1,
           status: 'delivered',
           kitchen_station: 'cold',
-          price_at_time: 800
+          price_at_time: 800,
+          selected_add_ons: []
         }
       ],
       status: 'completed',

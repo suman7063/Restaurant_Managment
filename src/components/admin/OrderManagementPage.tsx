@@ -197,10 +197,10 @@ const OrderManagementPage: React.FC<OrderManagementPageProps> = ({ restaurantId 
                     onClick={() => updateOrderStatus(order.id, getNextStatus(order.status)!)}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-all"
                   >
-                    Mark as {getNextStatus(order.status)?.charAt(0).toUpperCase() + getNextStatus(order.status)?.slice(1)}
+                    Mark as {getNextStatus(order.status)!.charAt(0).toUpperCase() + getNextStatus(order.status)!.slice(1)}
                   </button>
                 )}
-                {order.status === 'pending' && (
+                {order.status === 'active' && (
                   <button 
                     onClick={() => updateOrderStatus(order.id, 'cancelled')}
                     className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-all"

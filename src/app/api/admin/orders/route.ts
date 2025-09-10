@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       status: order.status,
       timestamp: order.created_at,
       is_session_order: order.is_joined_order,
-      items: order.order_items?.map(item => ({
+      items: order.order_items?.map((item: any) => ({
         id: item.id,
         menu_item: {
           id: item.menu_items?.id || '',

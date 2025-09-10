@@ -576,12 +576,14 @@ export const SessionTotal: React.FC<SessionTotalProps> = ({
             </label>
             <Select
               value={selectedSplitOption}
-              onChange={(value) => setSelectedSplitOption(value)}
-              options={splitOptions.map(option => ({
-                value: option.id,
-                label: option.name
-              }))}
-            />
+              onChange={(e) => setSelectedSplitOption(e.target.value)}
+            >
+              {splitOptions.map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
           </div>
 
           <div>
@@ -642,18 +644,18 @@ export const SessionTotal: React.FC<SessionTotalProps> = ({
                   </div>
                   <Select
                     value={paymentMethods[participant.id] || ''}
-                    onChange={(value) => setPaymentMethods(prev => ({
+                    onChange={(e) => setPaymentMethods(prev => ({
                       ...prev,
-                      [participant.id]: value
+                      [participant.id]: e.target.value
                     }))}
-                    options={[
-                      { value: '', label: 'Select method' },
-                      ...availablePaymentMethods.map(method => ({
-                        value: method.id,
-                        label: method.name
-                      }))
-                    ]}
-                  />
+                  >
+                    <option value="">Select method</option>
+                    {availablePaymentMethods.map(method => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
               ))}
             </div>
